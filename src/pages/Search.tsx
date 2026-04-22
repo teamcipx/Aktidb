@@ -1,0 +1,298 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { format } from 'date-fns';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import AccountDetailsModal from '../components/AccountDetailsModal';
+
+export default function Search() {
+  const [activeTab, setActiveTab] = useState<'fb'|'gmail'>('fb');
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  
+  // Basic filtering
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedPurpose, setSelectedPurpose] = useState('');
+  
+  // Available filter options based on data
+  const [countries, setCountries] = useState<string[]>([]);
+  const [purposes, setPurposes] = useState<string[]>([]);
+  
+  // Modal state
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
+
+  const handleExportCSV = () => {
+    if (filteredData.length === 0) return;
+    
+    const keys = Object.keys(filteredData[0]).filter(key => key !== 'id');
+    const csvRows = [
+      keys.join(','), 
+      ...filteredData.map(row => 
+        keys.map(k => {
+          let val = row[k] === null || row[k] === undefined ? '' : row[k];
+          val = String(val).replace(/"/g, '""');
+          return `"${val}"`;
+        }).join(',')
+      )
+    ];
+    
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `akti_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    if (filteredData.length === 0) return;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.text(`Akti DB - ${activeTab.toUpperCase()} Accounts`, 14, 15);
+    
+    const keys = Object.keys(filteredData[0]).filter(key => key !== 'id' && key !== 'password');
+    const data = filteredData.map(row => keys.map(k => row[k] || '-'));
+    
+    autoTable(doc, {
+      head: [keys.map(k => k.replace(/_/g, ' ').toUpperCase())],
+      body: data,
+      startY: 20,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [79, 70, 229] } // indigo-600
+    });
+    
+    doc.save(`akti_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const table = activeTab === 'fb' ? 'fb_accounts' : 'gmail_accounts';
+    const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error(error);
+    } else if (records) {
+      setData(records);
+      
+      // Extract unique countries and purposes for filter dropdowns
+      const uCountries = Array.from(new Set(records.map(r => r.country).filter(Boolean)));
+      const uPurposes = Array.from(new Set(records.map(r => r.purpose).filter(Boolean)));
+      setCountries(uCountries as string[]);
+      setPurposes(uPurposes as string[]);
+    }
+    setLoading(false);
+  };
+
+  const filteredData = data.filter(item => {
+    const matchesSearch = 
+      (item.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (item.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (item.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      
+    const matchesCountry = selectedCountry ? item.country === selectedCountry : true;
+    const matchesPurpose = selectedPurpose ? item.purpose === selectedPurpose : true;
+    
+    return matchesSearch && matchesCountry && matchesPurpose;
+  });
+
+  return (
+    <div className="space-y-6 flex flex-col h-full font-sans">
+      <div className="flex justify-between items-center bg-white border-b border-slate-200 px-4 md:px-8 py-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 mb-4 shrink-0 relative">
+        <div className="flex items-center space-x-2 text-indigo-600">
+          <SearchIcon className="w-5 h-5 font-bold" />
+          <h1 className="text-xs font-bold uppercase tracking-wider">Search Database</h1>
+        </div>
+        <div className="flex items-center space-x-2 absolute md:static right-4 top-3">
+          <button 
+            onClick={handleExportCSV}
+            title="Export full table to CSV"
+            className="flex items-center justify-center p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={handleExportPDF}
+            title="Export full table to PDF"
+            className="flex items-center justify-center p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={async () => {
+              const el = document.getElementById('search-table-container');
+              if (!el) return;
+              const url = await toPng(el, { pixelRatio: 2, backgroundColor: '#ffffff' });
+              const link = document.createElement('a');
+              link.download = `akti_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.png`;
+              link.href = url;
+              link.click();
+            }}
+            title="Export full table to Image"
+            className="flex items-center justify-center p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 border-b border-slate-200 pb-px shrink-0">
+        <button
+          onClick={() => setActiveTab('fb')}
+          className={cn(
+            "py-4 px-6 pb-3 text-sm font-bold border-b-2 transition-colors",
+            activeTab === 'fb' 
+              ? "border-indigo-600 text-indigo-600 bg-indigo-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Facebook Entry
+        </button>
+        <button
+          onClick={() => setActiveTab('gmail')}
+          className={cn(
+            "py-4 px-6 pb-3 text-sm font-bold border-b-2 transition-colors",
+            activeTab === 'gmail' 
+              ? "border-sky-600 text-sky-600 bg-sky-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Gmail Entry
+        </button>
+      </div>
+
+      {/* Filters Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-4 shrink-0">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search account name, email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-sans"
+          />
+          <div className="absolute left-3 top-2.5 text-slate-400">
+             <SearchIcon className="w-4 h-4" />
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg outline-none text-sm bg-white text-slate-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">All Countries</option>
+              {countries.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Layers className="w-4 h-4 text-slate-400" />
+            <select
+              value={selectedPurpose}
+              onChange={(e) => setSelectedPurpose(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg outline-none text-sm bg-white text-slate-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">All Purposes</option>
+              {purposes.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <div id="search-table-container" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col min-h-[300px]">
+        <div className="overflow-auto flex-1 scroll-hide">
+          <table className="w-full text-sm text-left text-slate-600">
+            <thead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Password</th>
+                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Country</th>
+                <th className="px-4 py-3">Purpose</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 text-xs uppercase tracking-widest font-bold">
+                    Loading records...
+                  </td>
+                </tr>
+              ) : filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 text-xs uppercase tracking-widest font-bold">
+                    No records found matching your filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((item) => (
+                  <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-slate-900">{item.name || '-'}</td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{item.email || '-'}</td>
+                    <td className="px-4 py-3 font-mono text-slate-500 text-xs">
+                      <div className="flex items-center space-x-2 min-w-[80px]">
+                        <span className={cn("transition-all flex-1", !revealedPasswords[item.id] && "opacity-40 blur-[3px] select-none")}>
+                          {revealedPasswords[item.id] ? (item.password || '-') : '••••••••'}
+                        </span>
+                        <button 
+                          onClick={() => setRevealedPasswords(prev => ({...prev, [item.id]: !prev[item.id]}))}
+                          className="text-slate-400 hover:text-indigo-600 transition-colors p-1 flex-shrink-0 cursor-pointer"
+                          title={revealedPasswords[item.id] ? "Hide password" : "Show password"}
+                        >
+                          {revealedPasswords[item.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{item.phone || '-'}</td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{item.country || '-'}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-700">
+                        {item.purpose || '-'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button 
+                         onClick={() => setSelectedAccount(item)}
+                         className="inline-flex items-center justify-center p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded border border-transparent hover:border-indigo-100 transition-all font-semibold"
+                         title="View account details"
+                      >
+                         <View className="w-4 h-4" />
+                         <span className="ml-1.5 text-xs">View</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selectedAccount && (
+        <AccountDetailsModal 
+          account={selectedAccount} 
+          type={activeTab} 
+          onClose={() => setSelectedAccount(null)} 
+        />
+      )}
+    </div>
+  );
+}

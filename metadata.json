@@ -1,0 +1,6 @@
+{
+  "name": "Akti DB",
+  "description": "Account database management system for securely storing FB and Gmail accounts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
