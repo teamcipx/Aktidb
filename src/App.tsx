@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Layout from './components/Layout';
@@ -11,6 +11,7 @@ import Overview from './pages/Overview';
 import Search from './pages/Search';
 import AddFb from './pages/AddFb';
 import AddGmail from './pages/AddGmail';
+import PublicWorkspace from './pages/PublicWorkspace';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const isAuthenticated = localStorage.getItem('akti_auth') === 'true';
@@ -28,6 +29,9 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        
+        {/* Public Workspace without Password */}
+        <Route path="/workspace" element={<PublicWorkspace />} />
         
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Overview />} />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
 
 export default function Login() {
   const [password, setPassword] = useState('');
@@ -68,13 +68,27 @@ export default function Login() {
               {error && <p className="mt-2 text-sm text-rose-500">{error}</p>}
             </div>
 
-            <div>
+            <div className="flex flex-col space-y-3 pt-2">
               <button
                 type="submit"
                 className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors uppercase tracking-wide"
               >
                 Access System
               </button>
+              
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-400 text-[10px] uppercase font-bold tracking-widest">or</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+              
+              <Link
+                to="/workspace"
+                className="w-full flex justify-center items-center py-2.5 px-4 border border-indigo-200 rounded shadow-sm text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors uppercase tracking-wide"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Public Workspace
+              </Link>
             </div>
           </form>
         </div>

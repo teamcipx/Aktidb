@@ -43,10 +43,20 @@ CREATE TABLE IF NOT EXISTS gmail_accounts (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Note: Because this is a simple Admin DB, RLS is temporarily allowed for authenticated requests. 
--- For production, YOU MUST enable Row Level Security (RLS) properly if exposing to the public internet!
+CREATE TABLE IF NOT EXISTS locked_accounts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    gmail TEXT NOT NULL,
+    password TEXT NOT NULL,
+    slots JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Note: Because this is a simple Admin DB, RLS is temporarily allowed for public/anon requests. 
+-- For production, YOU MUST limit this properly if exposing to the public internet!
 ALTER TABLE fb_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gmail_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE locked_accounts ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Enable read/write for anon" ON fb_accounts FOR ALL USING (true);
 CREATE POLICY "Enable read/write for anon" ON gmail_accounts FOR ALL USING (true);
+CREATE POLICY "Enable read/write for anon" ON locked_accounts FOR ALL USING (true);
