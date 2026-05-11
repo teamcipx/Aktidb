@@ -166,12 +166,27 @@ ALTER TABLE special_fb_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE special_gmail_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_numbers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Enable read/write for anon" ON fb_accounts;
 CREATE POLICY "Enable read/write for anon" ON fb_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON gmail_accounts;
 CREATE POLICY "Enable read/write for anon" ON gmail_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON locked_accounts;
 CREATE POLICY "Enable read/write for anon" ON locked_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON supabase_accounts;
 CREATE POLICY "Enable read/write for anon" ON supabase_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON github_accounts;
 CREATE POLICY "Enable read/write for anon" ON github_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON special_fb_accounts;
 CREATE POLICY "Enable read/write for anon" ON special_fb_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON special_gmail_accounts;
 CREATE POLICY "Enable read/write for anon" ON special_gmail_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable read/write for anon" ON contact_numbers;
 CREATE POLICY "Enable read/write for anon" ON contact_numbers FOR ALL USING (true);
 
