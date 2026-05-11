@@ -9,7 +9,7 @@ import autoTable from 'jspdf-autotable';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 
 export default function Search() {
-  const [activeTab, setActiveTab] = useState<'fb'|'gmail'>('fb');
+  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'>('fb');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +77,14 @@ export default function Search() {
 
   const fetchData = async () => {
     setLoading(true);
-    const table = activeTab === 'fb' ? 'fb_accounts' : 'gmail_accounts';
+    let table = 'fb_accounts';
+    if (activeTab === 'gmail') table = 'gmail_accounts';
+    if (activeTab === 'supabase') table = 'supabase_accounts';
+    if (activeTab === 'github') table = 'github_accounts';
+    if (activeTab === 'special_fb') table = 'special_fb_accounts';
+    if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
+    if (activeTab === 'contact') table = 'contact_numbers';
+    
     const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
     
     if (error) {
@@ -86,7 +93,7 @@ export default function Search() {
       setData(records);
       
       // Extract unique countries and purposes for filter dropdowns
-      const uCountries = Array.from(new Set(records.map(r => r.country).filter(Boolean)));
+      const uCountries = Array.from(new Set(records.map(r => r.country || r.group_name).filter(Boolean)));
       const uPurposes = Array.from(new Set(records.map(r => r.purpose).filter(Boolean)));
       setCountries(uCountries as string[]);
       setPurposes(uPurposes as string[]);
@@ -98,9 +105,11 @@ export default function Search() {
     const matchesSearch = 
       (item.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (item.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (item.organization?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (item.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase());
       
-    const matchesCountry = selectedCountry ? item.country === selectedCountry : true;
+    const itemCountry = item.country || item.group_name;
+    const matchesCountry = selectedCountry ? itemCountry === selectedCountry : true;
     const matchesPurpose = selectedPurpose ? item.purpose === selectedPurpose : true;
     
     return matchesSearch && matchesCountry && matchesPurpose;
@@ -147,11 +156,11 @@ export default function Search() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 border-b border-slate-200 pb-px shrink-0">
+      <div className="flex flex-wrap border-b border-slate-200 shrink-0">
         <button
           onClick={() => setActiveTab('fb')}
           className={cn(
-            "py-4 px-6 pb-3 text-sm font-bold border-b-2 transition-colors",
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
             activeTab === 'fb' 
               ? "border-indigo-600 text-indigo-600 bg-indigo-50/30" 
               : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
@@ -162,13 +171,68 @@ export default function Search() {
         <button
           onClick={() => setActiveTab('gmail')}
           className={cn(
-            "py-4 px-6 pb-3 text-sm font-bold border-b-2 transition-colors",
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
             activeTab === 'gmail' 
               ? "border-sky-600 text-sky-600 bg-sky-50/30" 
               : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
           )}
         >
           Gmail Entry
+        </button>
+        <button
+          onClick={() => setActiveTab('special_fb')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'special_fb' 
+              ? "border-rose-600 text-rose-600 bg-rose-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Spc. FB
+        </button>
+        <button
+          onClick={() => setActiveTab('special_gmail')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'special_gmail' 
+              ? "border-rose-600 text-rose-600 bg-rose-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Spc. Gmail
+        </button>
+        <button
+          onClick={() => setActiveTab('contact')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'contact' 
+              ? "border-amber-600 text-amber-600 bg-amber-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Contacts
+        </button>
+        <button
+          onClick={() => setActiveTab('supabase')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'supabase' 
+              ? "border-emerald-600 text-emerald-600 bg-emerald-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Supabase Entry
+        </button>
+        <button
+          onClick={() => setActiveTab('github')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'github' 
+              ? "border-violet-600 text-violet-600 bg-violet-50/30" 
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          )}
+        >
+          Github Entry
         </button>
       </div>
 
@@ -177,7 +241,7 @@ export default function Search() {
         <div className="relative flex-1">
           <input
             type="text"
-            placeholder="Search account name, email..."
+            placeholder="Search name, email, phone, organization..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-sans"
@@ -195,7 +259,7 @@ export default function Search() {
               onChange={(e) => setSelectedCountry(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg outline-none text-sm bg-white text-slate-900 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="">All Countries</option>
+              <option value="">{activeTab === 'contact' ? 'All Groups' : 'All Countries'}</option>
               {countries.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -222,10 +286,35 @@ export default function Search() {
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Password</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Purpose</th>
+                {activeTab === 'contact' ? (
+                  <>
+                    <th className="px-4 py-3">Phone</th>
+                    <th className="px-4 py-3">Org/Company</th>
+                    <th className="px-4 py-3">Purpose</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-4 py-3">Password</th>
+                    {activeTab === 'supabase' ? (
+                      <>
+                        <th className="px-4 py-3">Project URL</th>
+                        <th className="px-4 py-3">Purpose</th>
+                      </>
+                    ) : activeTab === 'github' ? (
+                      <>
+                        <th className="px-4 py-3">Username</th>
+                        <th className="px-4 py-3">Profile Link</th>
+                        <th className="px-4 py-3">Purpose</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="px-4 py-3">Phone</th>
+                        <th className="px-4 py-3">Country</th>
+                        <th className="px-4 py-3">Purpose</th>
+                      </>
+                    )}
+                  </>
+                )}
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -247,27 +336,64 @@ export default function Search() {
                   <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-slate-900">{item.name || '-'}</td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{item.email || '-'}</td>
-                    <td className="px-4 py-3 font-mono text-slate-500 text-xs">
-                      <div className="flex items-center space-x-2 min-w-[80px]">
-                        <span className={cn("transition-all flex-1", !revealedPasswords[item.id] && "opacity-40 blur-[3px] select-none")}>
-                          {revealedPasswords[item.id] ? (item.password || '-') : '••••••••'}
-                        </span>
-                        <button 
-                          onClick={() => setRevealedPasswords(prev => ({...prev, [item.id]: !prev[item.id]}))}
-                          className="text-slate-400 hover:text-indigo-600 transition-colors p-1 flex-shrink-0 cursor-pointer"
-                          title={revealedPasswords[item.id] ? "Hide password" : "Show password"}
-                        >
-                          {revealedPasswords[item.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{item.phone || '-'}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{item.country || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-700">
-                        {item.purpose || '-'}
-                      </span>
-                    </td>
+                    {activeTab === 'contact' ? (
+                      <>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{item.phone || '-'}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{item.organization || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-700">
+                            {item.purpose || item.group_name || '-'}
+                          </span>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 font-mono text-slate-500 text-xs">
+                          <div className="flex items-center space-x-2 min-w-[80px]">
+                            <span className={cn("transition-all flex-1", !revealedPasswords[item.id] && "opacity-40 blur-[3px] select-none")}>
+                              {revealedPasswords[item.id] ? (item.password || '-') : '••••••••'}
+                            </span>
+                            <button 
+                              onClick={() => setRevealedPasswords(prev => ({...prev, [item.id]: !prev[item.id]}))}
+                              className="text-slate-400 hover:text-indigo-600 transition-colors p-1 flex-shrink-0 cursor-pointer"
+                              title={revealedPasswords[item.id] ? "Hide password" : "Show password"}
+                            >
+                              {revealedPasswords[item.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </td>
+                        {activeTab === 'supabase' ? (
+                          <>
+                            <td className="px-4 py-3 text-slate-500 text-xs truncate max-w-[150px]" title={item.url}>{item.url || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700">
+                                {item.purpose || '-'}
+                              </span>
+                            </td>
+                          </>
+                        ) : activeTab === 'github' ? (
+                          <>
+                            <td className="px-4 py-3 text-slate-500 text-xs">{item.username || '-'}</td>
+                            <td className="px-4 py-3 text-slate-500 text-xs truncate max-w-[150px]" title={item.profile_link}>{item.profile_link || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-violet-50 text-violet-700">
+                                {item.purpose || '-'}
+                              </span>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-4 py-3 text-slate-500 text-xs">{item.phone || '-'}</td>
+                            <td className="px-4 py-3 text-slate-500 text-xs">{item.country || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-700">
+                                {item.purpose || '-'}
+                              </span>
+                            </td>
+                          </>
+                        )}
+                      </>
+                    )}
                     <td className="px-4 py-3 text-right">
                       <button 
                          onClick={() => setSelectedAccount(item)}

@@ -51,12 +51,127 @@ CREATE TABLE IF NOT EXISTS locked_accounts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS supabase_accounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  password TEXT,
+  url TEXT,
+  anon_key TEXT,
+  db_pass TEXT,
+  purpose TEXT,
+  creation_date DATE,
+  update_date DATE,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS github_accounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  username TEXT,
+  password TEXT,
+  two_fa TEXT,
+  two_fa_code TEXT,
+  purpose TEXT,
+  profile_link TEXT,
+  creation_date DATE,
+  update_date DATE,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS special_fb_accounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  phone TEXT,
+  password TEXT,
+  country TEXT,
+  purpose TEXT,
+  link TEXT,
+  two_fa TEXT,
+  two_fa_code TEXT,
+  security TEXT,
+  creation_date DATE,
+  dob DATE,
+  update_date DATE,
+  note TEXT,
+  recovery_email TEXT,
+  recovery_phone TEXT,
+  mother_name TEXT,
+  primary_device TEXT,
+  primary_location TEXT,
+  master_password TEXT,
+  secret_question TEXT,
+  secret_answer TEXT,
+  nid_number TEXT,
+  pass_number TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS special_gmail_accounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  phone TEXT,
+  password TEXT,
+  country TEXT,
+  purpose TEXT,
+  two_fa TEXT,
+  two_fa_code TEXT,
+  security TEXT,
+  creation_date DATE,
+  dob DATE,
+  device TEXT,
+  update_date DATE,
+  note TEXT,
+  recovery_email TEXT,
+  recovery_phone TEXT,
+  first_channel_name TEXT,
+  primary_device TEXT,
+  primary_location TEXT,
+  master_password TEXT,
+  secret_question TEXT,
+  secret_answer TEXT,
+  nid_number TEXT,
+  pass_number TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS contact_numbers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  phone TEXT,
+  email TEXT,
+  organization TEXT,
+  address TEXT,
+  group_name TEXT,
+  purpose TEXT,
+  creation_date DATE,
+  update_date DATE,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Note: Because this is a simple Admin DB, RLS is temporarily allowed for public/anon requests. 
 -- For production, YOU MUST limit this properly if exposing to the public internet!
 ALTER TABLE fb_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gmail_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE locked_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supabase_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE github_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE special_fb_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE special_gmail_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_numbers ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Enable read/write for anon" ON fb_accounts FOR ALL USING (true);
 CREATE POLICY "Enable read/write for anon" ON gmail_accounts FOR ALL USING (true);
 CREATE POLICY "Enable read/write for anon" ON locked_accounts FOR ALL USING (true);
+CREATE POLICY "Enable read/write for anon" ON supabase_accounts FOR ALL USING (true);
+CREATE POLICY "Enable read/write for anon" ON github_accounts FOR ALL USING (true);
+CREATE POLICY "Enable read/write for anon" ON special_fb_accounts FOR ALL USING (true);
+CREATE POLICY "Enable read/write for anon" ON special_gmail_accounts FOR ALL USING (true);
+CREATE POLICY "Enable read/write for anon" ON contact_numbers FOR ALL USING (true);
+

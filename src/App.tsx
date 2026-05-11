@@ -10,7 +10,12 @@ import Layout from './components/Layout';
 import Overview from './pages/Overview';
 import Search from './pages/Search';
 import AddFb from './pages/AddFb';
+import AddSpecialFb from './pages/AddSpecialFb';
+import AddSpecialGmail from './pages/AddSpecialGmail';
 import AddGmail from './pages/AddGmail';
+import AddSupabase from './pages/AddSupabase';
+import AddGithub from './pages/AddGithub';
+import AddContact from './pages/AddContact';
 import PublicWorkspace from './pages/PublicWorkspace';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -37,7 +42,12 @@ export default function App() {
           <Route index element={<Overview />} />
           <Route path="search" element={<Search />} />
           <Route path="add-fb" element={<AddFb />} />
+          <Route path="add-special-fb" element={<AddSpecialFb />} />
+          <Route path="add-special-gmail" element={<AddSpecialGmail />} />
           <Route path="add-gmail" element={<AddGmail />} />
+          <Route path="add-supabase" element={<AddSupabase />} />
+          <Route path="add-github" element={<AddGithub />} />
+          <Route path="add-contact" element={<AddContact />} />
         </Route>
       </Routes>
     </Router>

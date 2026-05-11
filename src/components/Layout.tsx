@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Database, Search, UserPlus, LogOut, ShieldCheck, Mail, Facebook, Menu, X } from 'lucide-react';
+import { Database, Search, UserPlus, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -21,7 +21,12 @@ export default function Layout() {
     { name: 'Overview', href: '/', icon: Database },
     { name: 'Search', href: '/search', icon: Search },
     { name: 'Add Facebook', href: '/add-fb', icon: Facebook },
+    { name: 'Add Special FB', href: '/add-special-fb', icon: ShieldAlert },
     { name: 'Add Gmail', href: '/add-gmail', icon: Mail },
+    { name: 'Add Special Gmail', href: '/add-special-gmail', icon: ShieldAlert },
+    { name: 'Add Supabase', href: '/add-supabase', icon: Database },
+    { name: 'Add Github', href: '/add-github', icon: Github },
+    { name: 'Add Contact', href: '/add-contact', icon: Phone },
   ];
 
   return (
