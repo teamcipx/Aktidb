@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
 
 export default function Overview() {
   const [fbCount, setFbCount] = useState<number | null>(null);
@@ -35,12 +36,95 @@ export default function Overview() {
     fetchStats();
   }, []);
 
+  const exportData = async (formatType: 'json' | 'csv') => {
+    setLoading(true);
+    try {
+      const tables = [
+        'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
+        'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
+        'contact_numbers'
+      ];
+      
+      const responses = await Promise.all(
+        tables.map(table => supabase.from(table).select('*').order('created_at', { ascending: false }))
+      );
+      
+      const allData: Record<string, any[]> = {};
+      tables.forEach((table, index) => {
+        allData[table] = responses[index].data || [];
+      });
+
+      const dateStr = format(new Date(), 'yyyy-MM-dd');
+      
+      if (formatType === 'json') {
+        const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `akti_full_backup_${dateStr}.json`;
+        link.click();
+      } else if (formatType === 'csv') {
+        // Find all possible headers
+        const allKeys = new Set<string>();
+        tables.forEach(table => {
+          allData[table].forEach(row => {
+            Object.keys(row).forEach(k => allKeys.add(k));
+          });
+        });
+        const headers = ['table_source', ...Array.from(allKeys)];
+        
+        let csvContent = headers.join(',') + '\n';
+        tables.forEach(table => {
+          allData[table].forEach(row => {
+            const rowValues = headers.map(header => {
+              if (header === 'table_source') return `"${table}"`;
+              let val = row[header];
+              if (val === null || val === undefined) return '';
+              return `"${String(val).replace(/"/g, '""')}"`;
+            });
+            csvContent += rowValues.join(',') + '\n';
+          });
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `akti_full_backup_${dateStr}.csv`;
+        link.click();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error exporting data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 flex flex-col h-full">
-        <div className="flex justify-between items-center bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 mb-4 shrink-0">
+        <div className="flex justify-between items-center bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 mb-4 shrink-0 relative">
         <div className="flex items-center space-x-2 text-indigo-400">
           <Database className="w-5 h-5 font-bold" />
           <h1 className="text-xs font-bold uppercase tracking-wider text-slate-100">Account Overview</h1>
+        </div>
+        <div className="flex items-center space-x-2 absolute md:static right-4 top-3">
+          <button 
+            onClick={() => exportData('csv')}
+            title="Export Backup (CSV)"
+            className="flex items-center justify-center p-2 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition-colors"
+          >
+            <Download className="w-4 h-4 mr-1.5" />
+            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:block pt-0.5">CSV Backup</span>
+          </button>
+          <button 
+            onClick={() => exportData('json')}
+            title="Export Backup (JSON)"
+            className="flex items-center justify-center p-2 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded transition-colors"
+          >
+            <FileJson className="w-4 h-4 mr-1.5" />
+            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:block pt-0.5">JSON Backup</span>
+          </button>
         </div>
       </div>
 

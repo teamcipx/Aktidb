@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Database, Search, UserPlus, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone } from 'lucide-react';
+import { Database, Search, UserPlus, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -19,6 +19,7 @@ export default function Layout() {
 
   const navigation = [
     { name: 'Overview', href: '/', icon: Database },
+    { name: 'Tasks', href: '/tasks', icon: CheckSquare },
     { name: 'Search', href: '/search', icon: Search },
     { name: 'Add Facebook', href: '/add-fb', icon: Facebook },
     { name: 'Add Special FB', href: '/add-special-fb', icon: ShieldAlert },

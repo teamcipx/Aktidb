@@ -190,3 +190,18 @@ CREATE POLICY "Enable read/write for anon" ON special_gmail_accounts FOR ALL USI
 DROP POLICY IF EXISTS "Enable read/write for anon" ON contact_numbers;
 CREATE POLICY "Enable read/write for anon" ON contact_numbers FOR ALL USING (true);
 
+
+CREATE TABLE IF NOT EXISTS todos (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  completed BOOLEAN DEFAULT false,
+  priority TEXT DEFAULT 'medium',
+  due_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON todos;
+CREATE POLICY "Enable read/write for anon" ON todos FOR ALL USING (true);
+

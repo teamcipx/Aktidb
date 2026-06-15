@@ -46,7 +46,10 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
   const exportIMG = async () => {
     const el = document.getElementById('account-details-print-area');
     if (!el) return;
-    const dataUrl = await toPng(el, { pixelRatio: 2, backgroundColor: '#ffffff' });
+    const dataUrl = await toPng(el, { 
+      pixelRatio: 3, 
+      backgroundColor: '#0f172a',
+    });
     const link = document.createElement('a');
     link.download = `${filenameBase}.png`;
     link.href = dataUrl;
@@ -56,13 +59,13 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
   const exportPDF = async () => {
     const el = document.getElementById('account-details-print-area');
     if (!el) return;
-    const imgData = await toPng(el, { pixelRatio: 2, backgroundColor: '#ffffff' });
+    const imgData = await toPng(el, { pixelRatio: 3, backgroundColor: '#0f172a' });
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (el.offsetHeight * pdfWidth) / el.offsetWidth;
     
-    // Add white background
-    pdf.setFillColor(255, 255, 255);
+    // Add dark background
+    pdf.setFillColor(15, 23, 42);
     pdf.rect(0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), 'F');
     
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);

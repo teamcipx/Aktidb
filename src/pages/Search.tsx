@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2 } from 'lucide-react';
+import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2, Edit2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import AccountDetailsModal from '../components/AccountDetailsModal';
+import EditRecordModal from '../components/EditRecordModal';
 
 export default function Search() {
   const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'>('fb');
@@ -25,6 +26,7 @@ export default function Search() {
   
   // Modal state
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
 
   const handleExportCSV = () => {
     if (filteredData.length === 0) return;
@@ -424,6 +426,13 @@ export default function Search() {
                            <span className="ml-1.5 text-xs">View</span>
                         </button>
                         <button 
+                           onClick={() => setEditingAccount(item)}
+                           className="inline-flex items-center justify-center p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50 rounded border border-transparent hover:border-emerald-500/20 transition-all font-semibold"
+                           title="Edit record"
+                        >
+                           <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
                            onClick={() => handleDelete(item.id)}
                            className="inline-flex items-center justify-center p-1.5 text-rose-500 hover:text-rose-400 hover:bg-slate-800/50 rounded border border-transparent hover:border-rose-500/20 transition-all font-semibold"
                            title="Delete record"
@@ -445,6 +454,19 @@ export default function Search() {
           account={selectedAccount} 
           type={activeTab} 
           onClose={() => setSelectedAccount(null)} 
+        />
+      )}
+
+      {editingAccount && (
+        <EditRecordModal 
+          account={editingAccount} 
+          type={activeTab} 
+          onClose={() => setEditingAccount(null)} 
+          onSave={(updatedData: any) => {
+            // Update local state
+            setData(data.map(item => item.id === editingAccount.id ? { ...item, ...updatedData } : item));
+            setEditingAccount(null);
+          }}
         />
       )}
     </div>

@@ -17,6 +17,7 @@ import AddSupabase from './pages/AddSupabase';
 import AddGithub from './pages/AddGithub';
 import AddContact from './pages/AddContact';
 import PublicWorkspace from './pages/PublicWorkspace';
+import Todo from './pages/Todo';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const isAuthenticated = localStorage.getItem('akti_auth') === 'true';
@@ -40,6 +41,7 @@ export default function App() {
         
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
           <Route index element={<Overview />} />
+          <Route path="tasks" element={<Todo />} />
           <Route path="search" element={<Search />} />
           <Route path="add-fb" element={<AddFb />} />
           <Route path="add-special-fb" element={<AddSpecialFb />} />
