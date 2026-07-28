@@ -15,6 +15,8 @@ import AddSpecialGmail from './pages/AddSpecialGmail';
 import AddGmail from './pages/AddGmail';
 import AddSupabase from './pages/AddSupabase';
 import AddGithub from './pages/AddGithub';
+import AddBrevo from './pages/AddBrevo';
+import AddVercel from './pages/AddVercel';
 import AddContact from './pages/AddContact';
 import PublicWorkspace from './pages/PublicWorkspace';
 import Todo from './pages/Todo';
@@ -49,6 +51,8 @@ export default function App() {
           <Route path="add-gmail" element={<AddGmail />} />
           <Route path="add-supabase" element={<AddSupabase />} />
           <Route path="add-github" element={<AddGithub />} />
+          <Route path="add-brevo" element={<AddBrevo />} />
+          <Route path="add-vercel" element={<AddVercel />} />
           <Route path="add-contact" element={<AddContact />} />
         </Route>
       </Routes>

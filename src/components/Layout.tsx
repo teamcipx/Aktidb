@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Database, Search, UserPlus, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare } from 'lucide-react';
+import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -17,94 +17,152 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const navigation = [
-    { name: 'Overview', href: '/', icon: Database },
-    { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-    { name: 'Search', href: '/search', icon: Search },
-    { name: 'Add Facebook', href: '/add-fb', icon: Facebook },
-    { name: 'Add Special FB', href: '/add-special-fb', icon: ShieldAlert },
-    { name: 'Add Gmail', href: '/add-gmail', icon: Mail },
-    { name: 'Add Special Gmail', href: '/add-special-gmail', icon: ShieldAlert },
-    { name: 'Add Supabase', href: '/add-supabase', icon: Database },
-    { name: 'Add Github', href: '/add-github', icon: Github },
-    { name: 'Add Contact', href: '/add-contact', icon: Phone },
+  const navGroups = [
+    {
+      title: 'Dashboard & Core',
+      items: [
+        { name: 'Overview', href: '/', icon: Layers, badge: 'Hub' },
+        { name: 'Task Manager', href: '/tasks', icon: CheckSquare },
+        { name: 'Vault & Search', href: '/search', icon: Search, badge: 'All' },
+      ]
+    },
+    {
+      title: 'Cloud & DevOps',
+      items: [
+        { name: 'Add Vercel', href: '/add-vercel', icon: Triangle, color: 'text-purple-400' },
+        { name: 'Add Supabase', href: '/add-supabase', icon: Database, color: 'text-emerald-400' },
+        { name: 'Add Github', href: '/add-github', icon: Github, color: 'text-slate-300' },
+        { name: 'Add Brevo', href: '/add-brevo', icon: Send, color: 'text-teal-400' },
+      ]
+    },
+    {
+      title: 'Socials & Comms',
+      items: [
+        { name: 'Add Facebook', href: '/add-fb', icon: Facebook, color: 'text-blue-400' },
+        { name: 'Add Special FB', href: '/add-special-fb', icon: ShieldAlert, color: 'text-rose-400' },
+        { name: 'Add Gmail', href: '/add-gmail', icon: Mail, color: 'text-red-400' },
+        { name: 'Add Special Gmail', href: '/add-special-gmail', icon: ShieldAlert, color: 'text-rose-400' },
+        { name: 'Add Contact', href: '/add-contact', icon: Phone, color: 'text-amber-400' },
+      ]
+    }
   ];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100 font-sans">
       {/* Mobile Sidebar Backdrop */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-950/80 z-40 md:hidden" 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 md:hidden animate-fade-in" 
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-[260px] flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-[270px] flex-shrink-0 bg-slate-900/95 md:bg-slate-900/80 backdrop-blur-xl border-r border-slate-800/80 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0 shadow-2xl md:shadow-none",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="p-6 border-b border-slate-800 flex flex-col items-start">
-          <div className="flex items-center text-indigo-400 w-full justify-between">
-            <div className="flex items-center">
-              <ShieldCheck className="w-6 h-6 mr-2" />
-              <span className="text-2xl font-bold tracking-tight uppercase text-slate-100">Akti</span>
-            </div>
-            <button className="md:hidden text-slate-400 hover:text-slate-200" onClick={() => setIsSidebarOpen(false)}>
+        {/* Brand Header */}
+        <div className="p-5 border-b border-slate-800/80 flex flex-col items-start bg-gradient-to-b from-indigo-950/20 to-transparent">
+          <div className="flex items-center w-full justify-between">
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-teal-400 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-200">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xl font-extrabold tracking-tight text-white font-display flex items-center gap-1.5">
+                  ZX HUB <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-widest">PRO</span>
+                </span>
+                <span className="text-[11px] font-semibold text-slate-400 tracking-wide">Asset & Cloud Manager</span>
+              </div>
+            </Link>
+            <button className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800" onClick={() => setIsSidebarOpen(false)}>
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-xs text-slate-500 mt-1">Account Management DB</p>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-2 mt-2">Main Menu</div>
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  isActive
-                    ? 'bg-indigo-500/10 text-indigo-400'
-                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200',
-                  'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors'
-                )}
-              >
-                <item.icon
-                  className={cn(
-                    isActive ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300',
-                    'mr-3 flex-shrink-0 h-5 w-5 transition-colors'
-                  )}
-                />
-                {item.name}
-              </Link>
-            );
-          })}
+        {/* Nav List */}
+        <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto scroll-hide">
+          {navGroups.map((group) => (
+            <div key={group.title} className="space-y-1">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
+                <span>{group.title}</span>
+              </div>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={cn(
+                        "group flex items-center justify-between px-3 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-150",
+                        isActive
+                          ? "bg-gradient-to-r from-indigo-600/20 to-purple-600/10 text-indigo-300 border border-indigo-500/30 shadow-sm"
+                          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
+                      )}
+                    >
+                      <div className="flex items-center min-w-0">
+                        <item.icon
+                          className={cn(
+                            "mr-3 flex-shrink-0 h-4 w-4 transition-colors",
+                            isActive ? "text-indigo-400" : (item.color || "text-slate-500 group-hover:text-slate-300")
+                          )}
+                        />
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={cn(
+                          "ml-2 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-md",
+                          isActive ? "bg-indigo-500/30 text-indigo-200" : "bg-slate-800 text-slate-400 group-hover:bg-slate-700"
+                        )}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        {/* Footer Profile & Logout */}
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/50 space-y-3">
+          <div className="flex items-center px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center text-xs font-bold text-white shadow">
+              ZX
+            </div>
+            <div className="ml-3 min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-200 truncate">ZX Administrator</p>
+              <p className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span> Vault Unlocked
+              </p>
+            </div>
+          </div>
           <button
             onClick={handleLogout}
-            className="group flex w-full items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-colors"
+            className="group flex w-full items-center justify-center px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-800/80 text-slate-300 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-slate-700/60 transition-all duration-200"
           >
-            <LogOut className="mr-3 flex-shrink-0 h-5 w-5 text-slate-500 group-hover:text-slate-300 transition-colors" />
-            Sign Out
+            <LogOut className="mr-2 h-4 w-4 text-slate-400 group-hover:text-rose-400 transition-colors" />
+            Lock & Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto w-full">
-        <div className="md:hidden flex items-center justify-between bg-slate-900 border-b border-slate-800 p-4 shrink-0">
-          <div className="flex items-center text-indigo-400">
-            <ShieldCheck className="w-6 h-6 mr-2" />
-            <span className="text-xl font-bold tracking-tight uppercase text-slate-100">Akti</span>
-          </div>
-          <button onClick={() => setIsSidebarOpen(true)} className="text-slate-400 hover:bg-slate-800 p-1 rounded">
-            <Menu className="w-6 h-6" />
+      {/* Main Content Area */}
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto w-full bg-slate-950/90">
+        {/* Mobile Header Bar */}
+        <div className="md:hidden flex items-center justify-between bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 p-4 shrink-0 sticky top-0 z-30">
+          <Link to="/" className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-teal-400 flex items-center justify-center shadow">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-lg font-extrabold tracking-tight text-white font-display">ZX HUB</span>
+          </Link>
+          <button onClick={() => setIsSidebarOpen(true)} className="text-slate-300 hover:bg-slate-800 p-2 rounded-lg border border-slate-800">
+            <Menu className="w-5 h-5" />
           </button>
         </div>
         <div className="flex-1 p-4 md:p-8">

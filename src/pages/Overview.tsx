@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
@@ -12,6 +12,8 @@ export default function Overview() {
   const [specialFbCount, setSpecialFbCount] = useState<number | null>(null);
   const [specialGmailCount, setSpecialGmailCount] = useState<number | null>(null);
   const [contactCount, setContactCount] = useState<number | null>(null);
+  const [brevoCount, setBrevoCount] = useState<number | null>(null);
+  const [vercelCount, setVercelCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,6 +25,8 @@ export default function Overview() {
       const { count: specFb } = await supabase.from('special_fb_accounts').select('*', { count: 'exact', head: true });
       const { count: specGm } = await supabase.from('special_gmail_accounts').select('*', { count: 'exact', head: true });
       const { count: contact } = await supabase.from('contact_numbers').select('*', { count: 'exact', head: true });
+      const { count: brevo } = await supabase.from('brevo_accounts').select('*', { count: 'exact', head: true });
+      const { count: vercel } = await supabase.from('vercel_accounts').select('*', { count: 'exact', head: true });
       
       setFbCount(fb || 0);
       setGmailCount(gmail || 0);
@@ -31,6 +35,8 @@ export default function Overview() {
       setSpecialFbCount(specFb || 0);
       setSpecialGmailCount(specGm || 0);
       setContactCount(contact || 0);
+      setBrevoCount(brevo || 0);
+      setVercelCount(vercel || 0);
       setLoading(false);
     }
     fetchStats();
@@ -42,7 +48,7 @@ export default function Overview() {
       const tables = [
         'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
         'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
-        'contact_numbers'
+        'contact_numbers', 'brevo_accounts', 'vercel_accounts'
       ];
       
       const responses = await Promise.all(
@@ -61,7 +67,7 @@ export default function Overview() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `akti_full_backup_${dateStr}.json`;
+        link.download = `zxhub_full_backup_${dateStr}.json`;
         link.click();
       } else if (formatType === 'csv') {
         // Find all possible headers
@@ -90,7 +96,7 @@ export default function Overview() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `akti_full_backup_${dateStr}.csv`;
+        link.download = `zxhub_full_backup_${dateStr}.csv`;
         link.click();
       }
     } catch (err) {
@@ -101,155 +107,189 @@ export default function Overview() {
     }
   };
 
+  const totalEntries = (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0);
+
+  const statCards = [
+    { label: 'Facebook', count: fbCount, icon: Facebook, color: 'from-blue-600/20 to-blue-900/10 border-blue-500/30 text-blue-400', glow: 'hover:shadow-blue-500/20' },
+    { label: 'Gmail', count: gmailCount, icon: Mail, color: 'from-red-600/20 to-red-900/10 border-red-500/30 text-red-400', glow: 'hover:shadow-red-500/20' },
+    { label: 'Supabase', count: supabaseCount, icon: Database, color: 'from-emerald-600/20 to-emerald-900/10 border-emerald-500/30 text-emerald-400', glow: 'hover:shadow-emerald-500/20' },
+    { label: 'Github', count: githubCount, icon: Github, color: 'from-slate-600/20 to-slate-900/10 border-slate-500/30 text-slate-300', glow: 'hover:shadow-slate-500/20' },
+    { label: 'Brevo Mail', count: brevoCount, icon: Send, color: 'from-teal-600/20 to-teal-900/10 border-teal-500/30 text-teal-400', glow: 'hover:shadow-teal-500/20' },
+    { label: 'Vercel Cloud', count: vercelCount, icon: Triangle, color: 'from-purple-600/20 to-purple-900/10 border-purple-500/30 text-purple-400', glow: 'hover:shadow-purple-500/20' },
+    { label: 'Contacts', count: contactCount, icon: Phone, color: 'from-amber-600/20 to-amber-900/10 border-amber-500/30 text-amber-400', glow: 'hover:shadow-amber-500/20' },
+    { label: 'Special FB', count: specialFbCount, icon: ShieldAlert, color: 'from-rose-600/20 to-rose-900/10 border-rose-500/30 text-rose-400', glow: 'hover:shadow-rose-500/20' },
+  ];
+
+  const quickActions = [
+    { name: 'Add Vercel Cloud', desc: 'Deployments, tokens & team IDs', href: '/add-vercel', icon: Triangle, color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+    { name: 'Add Supabase DB', desc: 'Project keys, secrets & JWTs', href: '/add-supabase', icon: Database, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { name: 'Add Brevo Mail', desc: 'SMTP keys & transactional email', href: '/add-brevo', icon: Send, color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
+    { name: 'Add Github Repo', desc: 'Personal access tokens & SSH', href: '/add-github', icon: Github, color: 'bg-slate-500/10 text-slate-300 border-slate-500/20' },
+    { name: 'Add FB Account', desc: 'Standard credentials & cookies', href: '/add-fb', icon: Facebook, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    { name: 'Add Gmail Account', desc: 'Google login & recovery codes', href: '/add-gmail', icon: Mail, color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+    { name: 'Add Contact', desc: 'Phone, address & NID records', href: '/add-contact', icon: Phone, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    { name: 'Search Vault', desc: 'Filter, view & edit all assets', href: '/search', icon: SearchIcon, color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
+  ];
+
   return (
-    <div className="space-y-6 flex flex-col h-full">
-        <div className="flex justify-between items-center bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 mb-4 shrink-0 relative">
-        <div className="flex items-center space-x-2 text-indigo-400">
-          <Database className="w-5 h-5 font-bold" />
-          <h1 className="text-xs font-bold uppercase tracking-wider text-slate-100">Account Overview</h1>
+    <div className="space-y-8 flex flex-col h-full font-sans">
+      {/* Top Banner & Title Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden shrink-0">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-l from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="flex items-center space-x-4 mb-4 md:mb-0 z-10">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-teal-400 p-[2px] shadow-lg shadow-indigo-500/20">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+              <Layers className="w-6 h-6 text-indigo-400" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight font-display">ZX HUB COMMAND CENTER</h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-widest animate-pulse">Live Vault</span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">Securely manage your cloud platforms, developer tokens, and social credentials</p>
+          </div>
         </div>
-        <div className="flex items-center space-x-2 absolute md:static right-4 top-3">
+
+        {/* Backup Action Buttons */}
+        <div className="flex items-center space-x-3 w-full md:w-auto z-10 justify-end">
           <button 
             onClick={() => exportData('csv')}
             title="Export Backup (CSV)"
-            className="flex items-center justify-center p-2 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition-colors"
+            disabled={loading}
+            className="flex items-center justify-center px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl transition-all duration-150 shadow-sm hover:scale-105 active:scale-95"
           >
-            <Download className="w-4 h-4 mr-1.5" />
-            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:block pt-0.5">CSV Backup</span>
+            <Download className="w-4 h-4 mr-2" />
+            <span>CSV Backup</span>
           </button>
           <button 
             onClick={() => exportData('json')}
             title="Export Backup (JSON)"
-            className="flex items-center justify-center p-2 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded transition-colors"
+            disabled={loading}
+            className="flex items-center justify-center px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 rounded-xl transition-all duration-150 shadow-sm hover:scale-105 active:scale-95"
           >
-            <FileJson className="w-4 h-4 mr-1.5" />
-            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:block pt-0.5">JSON Backup</span>
+            <FileJson className="w-4 h-4 mr-2" />
+            <span>JSON Backup</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 shrink-0">
-        <div className="bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-sm flex flex-col justify-center space-y-2 lg:col-span-1">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Total Entries</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">
-            {loading ? '-' : (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0)}
-          </p>
+      {/* Stats Grid */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-400" /> Asset Distribution
+          </h2>
+          <div className="text-xs font-bold text-slate-400 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800">
+            Total Stored: <span className="text-white font-mono text-sm ml-1">{loading ? '...' : totalEntries}</span>
+          </div>
         </div>
 
-        <div className="bg-indigo-950/30 rounded-xl border border-indigo-900/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest text-center">Facebook</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : fbCount}</p>
-        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {/* Total Hero Card */}
+          <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-slate-900/90 rounded-2xl border border-indigo-500/40 p-5 shadow-xl flex flex-col justify-between relative overflow-hidden group hover:border-indigo-400 transition-all duration-300">
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-all"></div>
+            <div className="flex items-center justify-between mb-2 z-10">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-indigo-300">Total Vault</span>
+              <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <Database className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="z-10 mt-2">
+              <p className="text-4xl lg:text-5xl font-extrabold text-white font-display tracking-tight">
+                {loading ? '-' : totalEntries}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium mt-1">Across all 9 categories</p>
+            </div>
+          </div>
 
-        <div className="bg-sky-950/30 rounded-xl border border-sky-900/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-sky-400 font-bold uppercase tracking-widest text-center">Gmail</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : gmailCount}</p>
-        </div>
-
-        <div className="bg-emerald-950/30 rounded-xl border border-emerald-900/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest text-center">Supabase</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : supabaseCount}</p>
-        </div>
-
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Github</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : githubCount}</p>
-        </div>
-        
-        <div className="bg-amber-950/30 rounded-xl border border-amber-900/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest text-center">Contact</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : contactCount}</p>
-        </div>
-
-        <div className="bg-rose-950/30 rounded-xl border border-rose-900/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest text-center">Special FB</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : specialFbCount}</p>
-        </div>
-
-        <div className="bg-rose-950/30 rounded-xl border border-rose-900/50 p-5 shadow-sm flex flex-col justify-center space-y-2">
-          <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest text-center">Special Gmail</p>
-          <p className="text-4xl font-bold text-slate-100 text-center">{loading ? '-' : specialGmailCount}</p>
+          {/* Individual Category Cards */}
+          {statCards.map((card) => (
+            <div 
+              key={card.label}
+              className={`bg-gradient-to-br ${card.color} bg-slate-900/80 rounded-2xl border p-5 shadow-lg flex flex-col justify-between relative overflow-hidden group transition-all duration-200 ${card.glow} hover:-translate-y-0.5`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider opacity-80">{card.label}</span>
+                <card.icon className="w-4 h-4 opacity-75 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="mt-2">
+                <p className="text-3xl font-extrabold text-white font-display">
+                  {loading ? '-' : card.count || 0}
+                </p>
+                <p className="text-[10px] text-slate-400 opacity-70 mt-0.5 font-medium">Stored Records</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6 border-t border-slate-800 shrink-0">
-        <Link to="/add-fb" className="group flex items-center p-4 bg-slate-900 border border-slate-800 shadow-sm hover:border-indigo-500/50 hover:bg-slate-800/50 rounded-xl transition-all">
-          <div className="p-3 bg-indigo-900/40 text-indigo-400 rounded mr-4">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-indigo-400">Add FB Account</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Register new Facebook entry</p>
-          </div>
-        </Link>
-        <Link to="/add-special-fb" className="group flex items-center p-4 bg-slate-900 border border-rose-900/50 shadow-sm hover:border-rose-500/50 hover:bg-rose-950/20 rounded-xl transition-all">
-          <div className="p-3 bg-rose-900/40 text-rose-400 rounded mr-4">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-rose-400">Special FB</h3>
-            <p className="text-xs text-slate-500 mt-0.5">High security FB record</p>
-          </div>
-        </Link>
+      {/* Quick Action Cards Grid */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-teal-400" /> Quick Add & Actions
+          </h2>
+          <Link to="/search" className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 group">
+            <span>View all items</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
 
-        <Link to="/add-gmail" className="group flex items-center p-4 bg-slate-900 border border-slate-800 shadow-sm hover:border-sky-500/50 hover:bg-slate-800/50 rounded-xl transition-all">
-          <div className="p-3 bg-sky-900/40 text-sky-400 rounded mr-4">
-            <UserPlus className="w-5 h-5" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((act) => (
+            <Link 
+              key={act.name}
+              to={act.href} 
+              className="group flex items-center p-4 bg-slate-900/90 border border-slate-800/80 hover:border-slate-700 rounded-2xl shadow-md hover:shadow-xl hover:bg-slate-800/60 transition-all duration-200 hover:-translate-y-1"
+            >
+              <div className={`p-3.5 rounded-xl border mr-4 shrink-0 transition-transform group-hover:scale-110 ${act.color}`}>
+                <act.icon className="w-5 h-5" />
+              </div>
+              <div className="text-left min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-200 group-hover:text-white truncate font-display">{act.name}</h3>
+                  <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0 shrink-0 ml-1" />
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{act.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Features Banner */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/30 to-slate-900/80 border border-indigo-900/40 flex items-center space-x-4">
+          <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 shrink-0">
+            <ShieldCheck className="w-6 h-6" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-sky-400">Add Gmail Account</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Register new Google entry</p>
+          <div>
+            <h4 className="text-sm font-bold text-white font-display">Row Level Security</h4>
+            <p className="text-xs text-slate-400 mt-0.5">All credentials protected via Supabase policies</p>
           </div>
-        </Link>
-        <Link to="/add-special-gmail" className="group flex items-center p-4 bg-slate-900 border border-rose-900/50 shadow-sm hover:border-rose-500/50 hover:bg-rose-950/20 rounded-xl transition-all">
-          <div className="p-3 bg-rose-900/40 text-rose-400 rounded mr-4">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-rose-400">Special Gmail</h3>
-            <p className="text-xs text-slate-500 mt-0.5">High security Google record</p>
-          </div>
-        </Link>
+        </div>
         
-        <Link to="/add-contact" className="group flex items-center p-4 bg-slate-900 border border-slate-800 shadow-sm hover:border-amber-500/50 hover:bg-slate-800/50 rounded-xl transition-all">
-          <div className="p-3 bg-amber-900/40 text-amber-400 rounded mr-4">
-            <Phone className="w-5 h-5" />
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-teal-950/30 to-slate-900/80 border border-teal-900/40 flex items-center space-x-4">
+          <div className="p-3 rounded-xl bg-teal-500/10 text-teal-400 shrink-0">
+            <CheckSquare className="w-6 h-6" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-amber-400">Add Contact</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Phone number & address</p>
+          <div>
+            <h4 className="text-sm font-bold text-white font-display">Integrated Task Manager</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Track DevOps tasks, maintenance & due dates</p>
           </div>
-        </Link>
-        
-        <Link to="/add-supabase" className="group flex items-center p-4 bg-slate-900 border border-slate-800 shadow-sm hover:border-emerald-500/50 hover:bg-slate-800/50 rounded-xl transition-all">
-          <div className="p-3 bg-emerald-900/40 text-emerald-400 rounded mr-4">
-            <UserPlus className="w-5 h-5" />
+        </div>
+
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-950/30 to-slate-900/80 border border-purple-900/40 flex items-center space-x-4">
+          <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 shrink-0">
+            <Users className="w-6 h-6" />
           </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-emerald-400">Add Supabase</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Register new DB Project</p>
+          <div>
+            <h4 className="text-sm font-bold text-white font-display">Public Workspace Locker</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Share non-sensitive accounts without master key</p>
           </div>
-        </Link>
-        
-        <Link to="/add-github" className="group flex items-center p-4 bg-slate-900 border border-slate-800 shadow-sm hover:border-violet-500/50 hover:bg-slate-800/50 rounded-xl transition-all">
-          <div className="p-3 bg-violet-900/40 text-violet-400 rounded mr-4">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-violet-400">Add Github</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Register new Repo Account</p>
-          </div>
-        </Link>
-        
-        <Link to="/search" className="group flex items-center p-4 bg-slate-900 border border-slate-800 shadow-sm hover:border-indigo-500/50 hover:bg-slate-800/50 rounded-xl transition-all">
-          <div className="p-3 bg-slate-800 text-slate-400 rounded mr-4">
-            <SearchIcon className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-sm font-semibold text-slate-200 group-hover:text-indigo-400">Search Database</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Advanced filtering & lookups</p>
-          </div>
-        </Link>
+        </div>
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
 
   const fields = Object.entries(getVisibleData()).filter(([k]) => k !== 'password');
   const metadataFields = ['creation_date', 'update_date', 'dob'];
-  const sensitiveFields = ['two_fa', 'two_fa_code', 'master_password', 'secret_answer', 'db_pass', 'recovery_code', 'nid_number', 'pass_number', 'anon_key', 'phone', 'email'];
+  const sensitiveFields = ['two_fa', 'two_fa_code', 'master_password', 'secret_answer', 'db_pass', 'recovery_code', 'nid_number', 'pass_number', 'anon_key', 'phone', 'email', 'api_key', 'smtp_key', 'token'];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
@@ -91,6 +91,8 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
                type === 'special_fb' ? 'Special FB Entry' :
                type === 'special_gmail' ? 'Special Gmail Entry' :
                type === 'contact' ? 'Contact Entry' :
+               type === 'brevo' ? 'Brevo Entry' :
+               type === 'vercel' ? 'Vercel Entry' :
                'Github Entry'}
             </p>
           </div>
@@ -127,6 +129,8 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
                     type === 'supabase' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                     type === 'special_fb' || type === 'special_gmail' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
                     type === 'contact' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                    type === 'brevo' ? "bg-teal-500/10 text-teal-400 border-teal-500/20" :
+                    type === 'vercel' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
                     "bg-violet-500/10 text-violet-400 border-violet-500/20"
                   )}>
                     {type.toUpperCase().replace('_', ' ')}

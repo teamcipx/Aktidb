@@ -205,3 +205,38 @@ ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read/write for anon" ON todos;
 CREATE POLICY "Enable read/write for anon" ON todos FOR ALL USING (true);
 
+
+CREATE TABLE IF NOT EXISTS brevo_accounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  password TEXT,
+  api_key TEXT,
+  smtp_key TEXT,
+  purpose TEXT,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE brevo_accounts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON brevo_accounts;
+CREATE POLICY "Enable read/write for anon" ON brevo_accounts FOR ALL USING (true);
+
+
+CREATE TABLE IF NOT EXISTS vercel_accounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  password TEXT,
+  token TEXT,
+  team_id TEXT,
+  purpose TEXT,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE vercel_accounts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON vercel_accounts;
+CREATE POLICY "Enable read/write for anon" ON vercel_accounts FOR ALL USING (true);
+
+

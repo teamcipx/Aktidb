@@ -23,6 +23,8 @@ export default function EditRecordModal({ account, type, onClose, onSave }: any)
       if (type === 'special_fb') table = 'special_fb_accounts';
       if (type === 'special_gmail') table = 'special_gmail_accounts';
       if (type === 'contact') table = 'contact_numbers';
+      if (type === 'brevo') table = 'brevo_accounts';
+      if (type === 'vercel') table = 'vercel_accounts';
 
       // Clean metadata before sending
       const dataToSave = { ...formData };

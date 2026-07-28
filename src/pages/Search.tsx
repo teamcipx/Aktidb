@@ -10,7 +10,7 @@ import AccountDetailsModal from '../components/AccountDetailsModal';
 import EditRecordModal from '../components/EditRecordModal';
 
 export default function Search() {
-  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'>('fb');
+  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'>('fb');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,6 +86,8 @@ export default function Search() {
     if (activeTab === 'special_fb') table = 'special_fb_accounts';
     if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
     if (activeTab === 'contact') table = 'contact_numbers';
+    if (activeTab === 'brevo') table = 'brevo_accounts';
+    if (activeTab === 'vercel') table = 'vercel_accounts';
     
     const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
     
@@ -113,6 +115,8 @@ export default function Search() {
     if (activeTab === 'special_fb') table = 'special_fb_accounts';
     if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
     if (activeTab === 'contact') table = 'contact_numbers';
+    if (activeTab === 'brevo') table = 'brevo_accounts';
+    if (activeTab === 'vercel') table = 'vercel_accounts';
 
     const { error } = await supabase.from(table).delete().eq('id', id);
     if (error) {
@@ -255,6 +259,28 @@ export default function Search() {
         >
           Github Entry
         </button>
+        <button
+          onClick={() => setActiveTab('brevo')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'brevo' 
+              ? "border-teal-500 text-teal-400 bg-teal-500/10" 
+              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
+        >
+          Brevo Entry
+        </button>
+        <button
+          onClick={() => setActiveTab('vercel')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'vercel' 
+              ? "border-purple-500 text-purple-400 bg-purple-500/10" 
+              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
+        >
+          Vercel Entry
+        </button>
       </div>
 
       {/* Filters Toolbar */}
@@ -325,6 +351,18 @@ export default function Search() {
                       <>
                         <th className="px-4 py-3">Username</th>
                         <th className="px-4 py-3">Profile Link</th>
+                        <th className="px-4 py-3">Purpose</th>
+                      </>
+                    ) : activeTab === 'brevo' ? (
+                      <>
+                        <th className="px-4 py-3">API Key v3</th>
+                        <th className="px-4 py-3">SMTP Key</th>
+                        <th className="px-4 py-3">Purpose</th>
+                      </>
+                    ) : activeTab === 'vercel' ? (
+                      <>
+                        <th className="px-4 py-3">Token</th>
+                        <th className="px-4 py-3">Team ID</th>
                         <th className="px-4 py-3">Purpose</th>
                       </>
                     ) : (
@@ -398,6 +436,26 @@ export default function Search() {
                             <td className="px-4 py-3 text-slate-400 text-xs truncate max-w-[150px]" title={item.profile_link}>{item.profile_link || '-'}</td>
                             <td className="px-4 py-3">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-violet-500/10 text-violet-400">
+                                {item.purpose || '-'}
+                              </span>
+                            </td>
+                          </>
+                        ) : activeTab === 'brevo' ? (
+                          <>
+                            <td className="px-4 py-3 text-slate-400 text-xs font-mono truncate max-w-[130px]" title={item.api_key}>{item.api_key || '-'}</td>
+                            <td className="px-4 py-3 text-slate-400 text-xs font-mono truncate max-w-[130px]" title={item.smtp_key}>{item.smtp_key || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-teal-500/10 text-teal-400">
+                                {item.purpose || '-'}
+                              </span>
+                            </td>
+                          </>
+                        ) : activeTab === 'vercel' ? (
+                          <>
+                            <td className="px-4 py-3 text-slate-400 text-xs font-mono truncate max-w-[130px]" title={item.token}>{item.token || '-'}</td>
+                            <td className="px-4 py-3 text-slate-400 text-xs">{item.team_id || '-'}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-purple-500/10 text-purple-400">
                                 {item.purpose || '-'}
                               </span>
                             </td>

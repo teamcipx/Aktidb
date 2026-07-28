@@ -1,6 +1,6 @@
 {
-  "name": "Akti DB",
-  "description": "Account database management system for securely storing FB and Gmail accounts.",
+  "name": "ZX Hub",
+  "description": "Next-gen Cloud & Account Asset Management System for securely managing credentials, cloud platforms, and DevOps environments.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
