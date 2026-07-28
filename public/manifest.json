@@ -1,0 +1,26 @@
+{
+  "short_name": "ZX Hub",
+  "name": "ZX Hub Command Center - Cloud & Asset Vault",
+  "description": "Enterprise-grade cloud platform, token, and social account asset manager with Row Level Security.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["productivity", "utilities", "developer"]
+}

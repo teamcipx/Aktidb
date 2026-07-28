@@ -48,7 +48,7 @@ export default function Search() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `akti_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.setAttribute('download', `zxhub_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -57,20 +57,55 @@ export default function Search() {
   const handleExportPDF = () => {
     if (filteredData.length === 0) return;
     const doc = new jsPDF('l', 'mm', 'a4');
-    doc.text(`Akti DB - ${activeTab.toUpperCase()} Accounts`, 14, 15);
     
-    const keys = Object.keys(filteredData[0]).filter(key => key !== 'id' && key !== 'password');
-    const data = filteredData.map(row => keys.map(k => row[k] || '-'));
+    // Header Banner
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, 297, 38, 'F');
+    
+    // Accent Line
+    doc.setFillColor(79, 70, 229); // indigo-600
+    doc.rect(0, 36, 297, 2, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`ZX HUB PRO - ${activeTab.replace(/_/g, ' ').toUpperCase()} VAULT REPORT`, 14, 16);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Filtered Category Export | Total Records: ${filteredData.length}`, 14, 25);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${format(new Date(), 'PPpp')} | Filter Criteria: ${selectedCountry || 'All Regions'} / ${selectedPurpose || 'All Purposes'}`, 14, 32);
+    
+    // Filter out internal id, user_id for cleaner presentation
+    const keys = Object.keys(filteredData[0]).filter(key => key !== 'id' && key !== 'user_id');
+    const head = [keys.map(k => k.replace(/_/g, ' ').toUpperCase())];
+    const data = filteredData.map(row => keys.map(k => {
+      let val = row[k];
+      if (val === null || val === undefined) return '-';
+      if (k === 'created_at') return format(new Date(val), 'yyyy-MM-dd');
+      return String(val);
+    }));
     
     autoTable(doc, {
-      head: [keys.map(k => k.replace(/_/g, ' ').toUpperCase())],
+      head: head,
       body: data,
-      startY: 20,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [79, 70, 229] } // indigo-600
+      startY: 44,
+      theme: 'grid',
+      styles: { fontSize: 8.5, cellPadding: 3, textColor: [30, 41, 59], overflow: 'linebreak' },
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 14, right: 14 },
+      didDrawPage: (data) => {
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`ZX Hub Command Center - Security & Asset Vault Report`, 14, 202);
+        doc.text(`Page ${data.pageNumber}`, 270, 202);
+      }
     });
     
-    doc.save(`akti_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    doc.save(`zxhub_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   useEffect(() => {
@@ -168,7 +203,7 @@ export default function Search() {
               if (!el) return;
               const url = await toPng(el, { pixelRatio: 2, backgroundColor: '#0f172a' }); // dark slate bg
               const link = document.createElement('a');
-              link.download = `akti_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.png`;
+              link.download = `zxhub_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.png`;
               link.href = url;
               link.click();
             }}

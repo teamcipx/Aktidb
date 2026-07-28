@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Overview() {
   const [fbCount, setFbCount] = useState<number | null>(null);
@@ -42,7 +44,7 @@ export default function Overview() {
     fetchStats();
   }, []);
 
-  const exportData = async (formatType: 'json' | 'csv') => {
+  const exportData = async (formatType: 'json' | 'csv' | 'pdf') => {
     setLoading(true);
     try {
       const tables = [
@@ -98,6 +100,136 @@ export default function Overview() {
         link.href = url;
         link.download = `zxhub_full_backup_${dateStr}.csv`;
         link.click();
+      } else if (formatType === 'pdf') {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        
+        // Header Background Banner
+        doc.setFillColor(15, 23, 42); // slate-900
+        doc.rect(0, 0, 210, 42, 'F');
+        
+        // Accent bar
+        doc.setFillColor(79, 70, 229); // indigo-600
+        doc.rect(0, 40, 210, 2, 'F');
+        
+        // Title text
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ZX HUB PRO - CLOUD & ASSET VAULT', 14, 18);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(203, 213, 225); // slate-300
+        doc.text('Executive Master Security & Credentials Report', 14, 26);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text(`Generated Date: ${format(new Date(), 'PPpp')}`, 14, 33);
+        
+        // Total Stats Box
+        let currentY = 50;
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, currentY, 182, 22, 3, 3, 'FD');
+        
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Vault Executive Overview', 20, currentY + 8);
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        const totalCount = Object.values(allData).reduce((sum, arr) => sum + arr.length, 0);
+        doc.text(`Total Protected Assets: ${totalCount} records verified & stored across ${tables.length} secure compartments.`, 20, currentY + 16);
+        
+        currentY += 30;
+        
+        const tableLabels: Record<string, { label: string; colName: string }> = {
+          fb_accounts: { label: 'Facebook Accounts', colName: 'Account / Email / Phone' },
+          gmail_accounts: { label: 'Gmail Accounts', colName: 'Email Address' },
+          supabase_accounts: { label: 'Supabase DB Projects', colName: 'Project Name / Ref ID' },
+          github_accounts: { label: 'Github Repositories & Tokens', colName: 'Username / Account' },
+          special_fb_accounts: { label: 'Special FB (High Security)', colName: 'Account Name / ID' },
+          special_gmail_accounts: { label: 'Special Gmail (High Security)', colName: 'Email Address' },
+          contact_numbers: { label: 'Emergency Contact Numbers', colName: 'Contact Name / Phone' },
+          brevo_accounts: { label: 'Brevo Mail SMTP Accounts', colName: 'Account / Email' },
+          vercel_accounts: { label: 'Vercel Cloud Deployments', colName: 'Team / Project Name' },
+        };
+
+        tables.forEach((table) => {
+          const records = allData[table] || [];
+          if (records.length === 0) return;
+          
+          const meta = tableLabels[table] || { label: table, colName: 'Primary Identifier' };
+          
+          if (currentY > 250) {
+            doc.addPage();
+            currentY = 20;
+          }
+
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(79, 70, 229);
+          doc.text(`${meta.label} (${records.length} items)`, 14, currentY);
+          currentY += 4;
+          
+          const head = [['#', meta.colName, 'Protected Details & Credentials', 'Created Date']];
+          const body = records.map((r, i) => {
+            const idCol = r.name || r.email || r.username || r.project_name || r.phone || r.account_name || 'N/A';
+            const details = [
+              r.password ? `Pass: ${r.password}` : '',
+              r.recovery_email ? `Recovery: ${r.recovery_email}` : '',
+              r.two_factor_secret ? `2FA: ${r.two_factor_secret}` : '',
+              r.api_key ? `API Key: ${r.api_key.substring(0, 15)}...` : '',
+              r.smtp_key ? `SMTP: ${r.smtp_key.substring(0, 15)}...` : '',
+              r.token ? `Token: ${r.token.substring(0, 15)}...` : '',
+              r.role ? `Role: ${r.role}` : ''
+            ].filter(Boolean).join(' | ');
+            
+            const dateVal = r.created_at ? format(new Date(r.created_at), 'yyyy-MM-dd') : '-';
+            return [String(i + 1), String(idCol), details || 'Standard Account Record', dateVal];
+          });
+
+          autoTable(doc, {
+            startY: currentY,
+            head: head,
+            body: body,
+            theme: 'grid',
+            headStyles: {
+              fillColor: [15, 23, 42],
+              textColor: [255, 255, 255],
+              fontSize: 9,
+              fontStyle: 'bold',
+              halign: 'left',
+              cellPadding: 3,
+            },
+            bodyStyles: {
+              fontSize: 8.5,
+              textColor: [30, 41, 59],
+              cellPadding: 2.5,
+            },
+            alternateRowStyles: {
+              fillColor: [248, 250, 252],
+            },
+            columnStyles: {
+              0: { cellWidth: 10, halign: 'center' },
+              1: { cellWidth: 55, fontStyle: 'bold' },
+              2: { cellWidth: 90 },
+              3: { cellWidth: 25, halign: 'center' },
+            },
+            margin: { left: 14, right: 14 },
+            didDrawPage: (data) => {
+              const pageCount = (doc as any).internal.getNumberOfPages();
+              doc.setFontSize(8);
+              doc.setTextColor(148, 163, 184);
+              doc.text(`ZX Hub Command Center - Confidential Security Report`, 14, 287);
+              doc.text(`Page ${data.pageNumber}`, 185, 287);
+            }
+          });
+          
+          currentY = (doc as any).lastAutoTable.finalY + 12;
+        });
+
+        doc.save(`zxhub_executive_report_${dateStr}.pdf`);
       }
     } catch (err) {
       console.error(err);
@@ -153,7 +285,16 @@ export default function Overview() {
         </div>
 
         {/* Backup Action Buttons */}
-        <div className="flex items-center space-x-3 w-full md:w-auto z-10 justify-end">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto z-10 justify-end mt-4 md:mt-0">
+          <button 
+            onClick={() => exportData('pdf')}
+            title="Export Executive Report (PDF)"
+            disabled={loading}
+            className="flex items-center justify-center px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-xl transition-all duration-150 shadow-sm hover:scale-105 active:scale-95"
+          >
+            <FileText className="w-4 h-4 mr-2 text-rose-400" />
+            <span>PDF Report</span>
+          </button>
           <button 
             onClick={() => exportData('csv')}
             title="Export Backup (CSV)"
