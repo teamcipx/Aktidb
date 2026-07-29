@@ -18,6 +18,7 @@ import AddGithub from './pages/AddGithub';
 import AddBrevo from './pages/AddBrevo';
 import AddVercel from './pages/AddVercel';
 import AddContact from './pages/AddContact';
+import ImgbbManager from './pages/ImgbbManager';
 import PublicWorkspace from './pages/PublicWorkspace';
 import Todo from './pages/Todo';
 
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="add-github" element={<AddGithub />} />
           <Route path="add-brevo" element={<AddBrevo />} />
           <Route path="add-vercel" element={<AddVercel />} />
+          <Route path="imgbb" element={<ImgbbManager />} />
           <Route path="add-contact" element={<AddContact />} />
         </Route>
       </Routes>

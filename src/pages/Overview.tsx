@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -16,6 +16,7 @@ export default function Overview() {
   const [contactCount, setContactCount] = useState<number | null>(null);
   const [brevoCount, setBrevoCount] = useState<number | null>(null);
   const [vercelCount, setVercelCount] = useState<number | null>(null);
+  const [imgbbCount, setImgbbCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function Overview() {
       const { count: contact } = await supabase.from('contact_numbers').select('*', { count: 'exact', head: true });
       const { count: brevo } = await supabase.from('brevo_accounts').select('*', { count: 'exact', head: true });
       const { count: vercel } = await supabase.from('vercel_accounts').select('*', { count: 'exact', head: true });
+      const { count: imgbb } = await supabase.from('imgbb_api_keys').select('*', { count: 'exact', head: true });
       
       setFbCount(fb || 0);
       setGmailCount(gmail || 0);
@@ -39,6 +41,7 @@ export default function Overview() {
       setContactCount(contact || 0);
       setBrevoCount(brevo || 0);
       setVercelCount(vercel || 0);
+      setImgbbCount(imgbb || 0);
       setLoading(false);
     }
     fetchStats();
@@ -50,7 +53,7 @@ export default function Overview() {
       const tables = [
         'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
         'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
-        'contact_numbers', 'brevo_accounts', 'vercel_accounts'
+        'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys'
       ];
       
       const responses = await Promise.all(
@@ -153,6 +156,7 @@ export default function Overview() {
           contact_numbers: { label: 'Emergency Contact Numbers', colName: 'Contact Name / Phone' },
           brevo_accounts: { label: 'Brevo Mail SMTP Accounts', colName: 'Account / Email' },
           vercel_accounts: { label: 'Vercel Cloud Deployments', colName: 'Team / Project Name' },
+          imgbb_api_keys: { label: 'ImgBB API Keys Vault', colName: 'ImgBB Key / Note' },
         };
 
         tables.forEach((table) => {
@@ -239,9 +243,10 @@ export default function Overview() {
     }
   };
 
-  const totalEntries = (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0);
+  const totalEntries = (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0) + (imgbbCount || 0);
 
   const statCards = [
+    { label: 'ImgBB Keys', count: imgbbCount, icon: Image, color: 'from-teal-600/20 to-teal-900/10 border-teal-500/30 text-teal-300', glow: 'hover:shadow-teal-500/20' },
     { label: 'Facebook', count: fbCount, icon: Facebook, color: 'from-blue-600/20 to-blue-900/10 border-blue-500/30 text-blue-400', glow: 'hover:shadow-blue-500/20' },
     { label: 'Gmail', count: gmailCount, icon: Mail, color: 'from-red-600/20 to-red-900/10 border-red-500/30 text-red-400', glow: 'hover:shadow-red-500/20' },
     { label: 'Supabase', count: supabaseCount, icon: Database, color: 'from-emerald-600/20 to-emerald-900/10 border-emerald-500/30 text-emerald-400', glow: 'hover:shadow-emerald-500/20' },
@@ -253,6 +258,7 @@ export default function Overview() {
   ];
 
   const quickActions = [
+    { name: 'ImgBB API Vault', desc: 'Dispense & bulk store API keys', href: '/imgbb', icon: Image, color: 'bg-teal-500/10 text-teal-300 border-teal-500/20' },
     { name: 'Add Vercel Cloud', desc: 'Deployments, tokens & team IDs', href: '/add-vercel', icon: Triangle, color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
     { name: 'Add Supabase DB', desc: 'Project keys, secrets & JWTs', href: '/add-supabase', icon: Database, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
     { name: 'Add Brevo Mail', desc: 'SMTP keys & transactional email', href: '/add-brevo', icon: Send, color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
@@ -260,7 +266,6 @@ export default function Overview() {
     { name: 'Add FB Account', desc: 'Standard credentials & cookies', href: '/add-fb', icon: Facebook, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
     { name: 'Add Gmail Account', desc: 'Google login & recovery codes', href: '/add-gmail', icon: Mail, color: 'bg-red-500/10 text-red-400 border-red-500/20' },
     { name: 'Add Contact', desc: 'Phone, address & NID records', href: '/add-contact', icon: Phone, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    { name: 'Search Vault', desc: 'Filter, view & edit all assets', href: '/search', icon: SearchIcon, color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
   ];
 
   return (

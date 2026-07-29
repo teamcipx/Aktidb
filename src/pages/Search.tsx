@@ -10,7 +10,7 @@ import AccountDetailsModal from '../components/AccountDetailsModal';
 import EditRecordModal from '../components/EditRecordModal';
 
 export default function Search() {
-  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'>('fb');
+  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'>('fb');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +123,7 @@ export default function Search() {
     if (activeTab === 'contact') table = 'contact_numbers';
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
+    if (activeTab === 'imgbb') table = 'imgbb_api_keys';
     
     const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
     
@@ -315,6 +316,17 @@ export default function Search() {
           )}
         >
           Vercel Entry
+        </button>
+        <button
+          onClick={() => setActiveTab('imgbb')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'imgbb' 
+              ? "border-teal-500 text-teal-300 bg-teal-500/10" 
+              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
+        >
+          ImgBB Keys
         </button>
       </div>
 

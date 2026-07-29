@@ -240,3 +240,15 @@ DROP POLICY IF EXISTS "Enable read/write for anon" ON vercel_accounts;
 CREATE POLICY "Enable read/write for anon" ON vercel_accounts FOR ALL USING (true);
 
 
+CREATE TABLE IF NOT EXISTS imgbb_api_keys (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  api_key TEXT NOT NULL,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE imgbb_api_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON imgbb_api_keys;
+CREATE POLICY "Enable read/write for anon" ON imgbb_api_keys FOR ALL USING (true);
+
+
