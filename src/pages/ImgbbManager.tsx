@@ -6,6 +6,7 @@ interface ImgbbKey {
   id: string;
   api_key: string;
   note?: string;
+  status?: string;
   created_at: string;
 }
 
@@ -20,6 +21,7 @@ export default function ImgbbManager() {
   // Storage input state
   const [rawInput, setRawInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
+  const [statusInput, setStatusInput] = useState('Uncompleted');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -107,6 +109,7 @@ export default function ImgbbManager() {
     const newRecords = lines.map(keyStr => ({
       api_key: keyStr,
       note: noteInput.trim() || 'ImgBB API Key',
+      status: statusInput,
       created_at: new Date().toISOString()
     }));
 
@@ -210,6 +213,19 @@ export default function ImgbbManager() {
       await navigator.clipboard.writeText(keyItem.api_key);
       setCopiedKeyId(keyItem.id);
       setTimeout(() => setCopiedKeyId(null), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleKeyStatus = async (keyItem: ImgbbKey) => {
+    const newStatus = keyItem.status === 'Complete' ? 'Uncompleted' : 'Complete';
+    const updatedKeys = keys.map(k => k.id === keyItem.id ? { ...k, status: newStatus } : k);
+    setKeys(updatedKeys);
+    saveLocalKeys(updatedKeys);
+
+    try {
+      await supabase.from('imgbb_api_keys').update({ status: newStatus }).eq('id', keyItem.id);
     } catch (e) {
       console.error(e);
     }
@@ -434,17 +450,33 @@ a82f102c91..."
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Tag / Label / Note <span className="text-slate-500 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={noteInput}
-                  onChange={(e) => setNoteInput(e.target.value)}
-                  placeholder="e.g. Batch 2026, Free tier accounts, Production app"
-                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                    Tag / Label / Note <span className="text-slate-500 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    placeholder="e.g. Batch 2026, Free tier"
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-teal-400">
+                    Status
+                  </label>
+                  <select
+                    value={statusInput}
+                    onChange={(e) => setStatusInput(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+                  >
+                    <option value="Uncompleted">Uncompleted</option>
+                    <option value="Complete">Complete</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center justify-end pt-2">
@@ -546,6 +578,7 @@ a82f102c91..."
                 <th className="py-3 px-4 w-12 text-center">#</th>
                 <th className="py-3 px-4">ImgBB API Key</th>
                 <th className="py-3 px-4">Label / Note</th>
+                <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Added Date</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -553,14 +586,14 @@ a82f102c91..."
             <tbody className="divide-y divide-slate-800/60 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-teal-400" />
                     <span>Loading ImgBB Vault...</span>
                   </td>
                 </tr>
               ) : filteredKeys.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
                     <Image className="w-8 h-8 mx-auto mb-2 text-slate-600 opacity-60" />
                     <p className="font-semibold text-slate-300">No ImgBB API Keys Stored</p>
                     <p className="text-[11px] text-slate-500 mt-1">Submit new keys above to populate the vault.</p>
@@ -577,6 +610,20 @@ a82f102c91..."
                     </td>
                     <td className="py-3 px-4 text-slate-300">
                       {item.note || <span className="text-slate-600 italic">No note</span>}
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleKeyStatus(item)}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border cursor-pointer transition-all hover:scale-105 ${
+                          item.status === 'Complete'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}
+                        title="Click to toggle status"
+                      >
+                        {item.status || 'Uncompleted'}
+                      </button>
                     </td>
                     <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">
                       {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}

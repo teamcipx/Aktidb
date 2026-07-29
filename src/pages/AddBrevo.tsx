@@ -10,10 +10,10 @@ export default function AddBrevo() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', password: '', api_key: '', 
-    smtp_key: '', purpose: '', note: ''
+    smtp_key: '', purpose: '', status: 'Uncompleted', note: ''
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -63,6 +63,19 @@ export default function AddBrevo() {
             <Field label="API Key v3" name="api_key" value={formData.api_key} onChange={handleChange} type="password" placeholder="xkeysib-..." />
             <Field label="SMTP Key / Password" name="smtp_key" value={formData.smtp_key} onChange={handleChange} type="password" placeholder="xsmtpsib-..." />
             <Field label="Purpose" name="purpose" value={formData.purpose} onChange={handleChange} placeholder="Transactional emails, newsletter..." />
+            
+            <div className="space-y-1.5 flex flex-col relative w-full">
+              <label className="text-[11px] font-bold text-teal-400 uppercase tracking-tighter block">Account Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-950 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
             
             <div className="col-span-full space-y-1.5 mt-2">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Additional Note</label>

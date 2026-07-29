@@ -1,5 +1,14 @@
--- Run this entire script in your Supabase SQL Editor
--- This will create the necessary tables for Akti DB
+-- Add status column to existing tables if needed
+ALTER TABLE fb_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE gmail_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE supabase_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE github_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE special_fb_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE special_gmail_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE contact_numbers ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE brevo_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE vercel_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+ALTER TABLE imgbb_api_keys ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
 
 CREATE TABLE IF NOT EXISTS fb_accounts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

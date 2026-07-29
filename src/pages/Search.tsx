@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2, Edit2 } from 'lucide-react';
+import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2, Edit2, Check, Clock, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { toPng } from 'html-to-image';
@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 import EditRecordModal from '../components/EditRecordModal';
+import PdfExportModal from '../components/PdfExportModal';
 
 export default function Search() {
   const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'>('fb');
@@ -15,10 +16,34 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   
   // Basic filtering
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedPurpose, setSelectedPurpose] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+
+  const handleToggleStatus = async (item: any) => {
+    const newStatus = (item.status === 'Complete') ? 'Uncompleted' : 'Complete';
+    let table = 'fb_accounts';
+    if (activeTab === 'gmail') table = 'gmail_accounts';
+    if (activeTab === 'supabase') table = 'supabase_accounts';
+    if (activeTab === 'github') table = 'github_accounts';
+    if (activeTab === 'special_fb') table = 'special_fb_accounts';
+    if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
+    if (activeTab === 'contact') table = 'contact_numbers';
+    if (activeTab === 'brevo') table = 'brevo_accounts';
+    if (activeTab === 'vercel') table = 'vercel_accounts';
+    if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+
+    const { error } = await supabase.from(table).update({ status: newStatus }).eq('id', item.id);
+    if (!error) {
+      setData(data.map(d => d.id === item.id ? { ...d, status: newStatus } : d));
+    } else {
+      console.warn('Could not update status in DB, updating local view:', error.message);
+      setData(data.map(d => d.id === item.id ? { ...d, status: newStatus } : d));
+    }
+  };
   
   // Available filter options based on data
   const [countries, setCountries] = useState<string[]>([]);
@@ -56,6 +81,11 @@ export default function Search() {
 
   const handleExportPDF = () => {
     if (filteredData.length === 0) return;
+    setIsPdfModalOpen(true);
+  };
+
+  const performExportPDF = (includePassword: boolean) => {
+    if (filteredData.length === 0) return;
     const doc = new jsPDF('l', 'mm', 'a4');
     
     // Header Banner
@@ -69,19 +99,26 @@ export default function Search() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(`ZX HUB PRO - ${activeTab.replace(/_/g, ' ').toUpperCase()} VAULT REPORT`, 14, 16);
+    doc.text(`AKTI DB - ${activeTab.replace(/_/g, ' ').toUpperCase()} VAULT REPORT`, 14, 16);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(203, 213, 225);
-    doc.text(`Filtered Category Export | Total Records: ${filteredData.length}`, 14, 25);
+    doc.text(`Category Export | Total Records: ${filteredData.length} | Mode: ${includePassword ? 'WITH PASSWORDS' : 'WITHOUT PASSWORDS'}`, 14, 25);
     doc.setTextColor(148, 163, 184);
-    doc.text(`Generated: ${format(new Date(), 'PPpp')} | Filter Criteria: ${selectedCountry || 'All Regions'} / ${selectedPurpose || 'All Purposes'}`, 14, 32);
+    doc.text(`Generated: ${format(new Date(), 'PPpp')} | Filters: ${selectedCountry || 'All Regions'} / ${selectedPurpose || 'All Purposes'} | Issue by : Ali Hosen`, 14, 32);
     
-    // Filter out internal id, user_id for cleaner presentation
-    const keys = Object.keys(filteredData[0]).filter(key => key !== 'id' && key !== 'user_id');
+    // Filter out internal id, user_id and conditionally password fields
+    const keys = Object.keys(filteredData[0]).filter(key => {
+      if (key === 'id' || key === 'user_id') return false;
+      if (!includePassword && (key === 'password' || key === 'master_password' || key === 'db_pass' || key === 'two_fa_code' || key === 'smtp_key')) {
+        return false;
+      }
+      return true;
+    });
+
     const head = [keys.map(k => k.replace(/_/g, ' ').toUpperCase())];
-    const data = filteredData.map(row => keys.map(k => {
+    const dataRows = filteredData.map(row => keys.map(k => {
       let val = row[k];
       if (val === null || val === undefined) return '-';
       if (k === 'created_at') return format(new Date(val), 'yyyy-MM-dd');
@@ -90,7 +127,7 @@ export default function Search() {
     
     autoTable(doc, {
       head: head,
-      body: data,
+      body: dataRows,
       startY: 44,
       theme: 'grid',
       styles: { fontSize: 8.5, cellPadding: 3, textColor: [30, 41, 59], overflow: 'linebreak' },
@@ -100,12 +137,13 @@ export default function Search() {
       didDrawPage: (data) => {
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
-        doc.text(`ZX Hub Command Center - Security & Asset Vault Report`, 14, 202);
+        doc.text(`Akti DB Command Center - Vault Category Report  |  Issue by : Ali Hosen`, 14, 202);
         doc.text(`Page ${data.pageNumber}`, 270, 202);
       }
     });
     
-    doc.save(`zxhub_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    const modeTag = includePassword ? 'with_pass' : 'no_pass';
+    doc.save(`zxhub_export_${activeTab}_${modeTag}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   useEffect(() => {
@@ -172,8 +210,10 @@ export default function Search() {
     const itemCountry = item.country || item.group_name;
     const matchesCountry = selectedCountry ? itemCountry === selectedCountry : true;
     const matchesPurpose = selectedPurpose ? item.purpose === selectedPurpose : true;
+    const itemStatus = item.status || 'Uncompleted';
+    const matchesStatus = selectedStatus ? itemStatus === selectedStatus : true;
     
-    return matchesSearch && matchesCountry && matchesPurpose;
+    return matchesSearch && matchesCountry && matchesPurpose && matchesStatus;
   });
 
   return (
@@ -369,6 +409,19 @@ export default function Search() {
               {purposes.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-slate-500" />
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg outline-none text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="Uncompleted">Uncompleted</option>
+              <option value="Complete">Complete</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -421,6 +474,7 @@ export default function Search() {
                     )}
                   </>
                 )}
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -520,6 +574,22 @@ export default function Search() {
                         )}
                       </>
                     )}
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(item)}
+                        title="Click to toggle status (Complete / Uncompleted)"
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border transition-all cursor-pointer hover:scale-105 shadow-sm",
+                          (item.status === 'Complete')
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30"
+                        )}
+                      >
+                        {item.status === 'Complete' ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-amber-400" />}
+                        <span>{item.status || 'Uncompleted'}</span>
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button 
@@ -574,6 +644,16 @@ export default function Search() {
           }}
         />
       )}
+
+      {/* PDF Export Mode Options Modal */}
+      <PdfExportModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        onExport={(includePassword) => performExportPDF(includePassword)}
+        title={`${activeTab.replace(/_/g, ' ').toUpperCase()} Category PDF Export`}
+        subtitle="Select whether to include passwords in the exported PDF."
+        recordCount={filteredData.length}
+      />
     </div>
   );
 }

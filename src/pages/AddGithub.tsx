@@ -10,7 +10,7 @@ export default function AddGithub() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', username: '', password: '', 
-    two_fa: '', two_fa_code: '', purpose: '', profile_link: '', 
+    two_fa: '', two_fa_code: '', purpose: '', status: 'Uncompleted', profile_link: '', 
     creation_date: '', note: ''
   });
 
@@ -69,6 +69,18 @@ export default function AddGithub() {
             <Field label="Recovery Code" name="two_fa_code" value={formData.two_fa_code} onChange={handleChange} type="password" />
             
             <div className="col-span-full mt-4 text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 border-b border-slate-800 pb-2">Metadata</div>
+            <div className="space-y-1.5 flex flex-col relative w-full">
+              <label className="text-[11px] font-bold text-teal-400 uppercase tracking-tighter block">Account Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-950 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
             <Field label="Purpose" name="purpose" value={formData.purpose} onChange={handleChange} />
             <Field label="Profile Link" name="profile_link" value={formData.profile_link} onChange={handleChange} />
             <Field label="Creation Date" name="creation_date" value={formData.creation_date} onChange={handleChange} type="date" />

@@ -10,10 +10,10 @@ export default function AddVercel() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', password: '', token: '', 
-    team_id: '', purpose: '', note: ''
+    team_id: '', purpose: '', status: 'Uncompleted', note: ''
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -63,6 +63,19 @@ export default function AddVercel() {
             <Field label="Personal Access Token" name="token" value={formData.token} onChange={handleChange} type="password" placeholder="vc_..." />
             <Field label="Team ID / Slug" name="team_id" value={formData.team_id} onChange={handleChange} placeholder="team_... or slug" />
             <Field label="Purpose" name="purpose" value={formData.purpose} onChange={handleChange} placeholder="Hosting web apps, AI tools..." />
+            
+            <div className="space-y-1.5 flex flex-col relative w-full">
+              <label className="text-[11px] font-bold text-teal-400 uppercase tracking-tighter block">Account Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-950 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
             
             <div className="col-span-full space-y-1.5 mt-2">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Additional Note</label>

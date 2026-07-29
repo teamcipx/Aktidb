@@ -10,7 +10,7 @@ export default function AddSpecialFb() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', password: '', country: '',
-    purpose: '', link: '', two_fa: '', two_fa_code: '',
+    purpose: '', status: 'Uncompleted', link: '', two_fa: '', two_fa_code: '',
     security: '', creation_date: '', dob: '', note: '',
     recovery_email: '', recovery_phone: '', mother_name: '',
     primary_device: '', primary_location: '', master_password: '',
@@ -89,6 +89,18 @@ export default function AddSpecialFb() {
 
             <div className="col-span-full mt-4 text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 border-b border-slate-800 pb-2">Status & Metadata</div>
             <Field label="Purpose" name="purpose" value={formData.purpose} onChange={handleChange} />
+            <div className="space-y-1.5 flex flex-col relative w-full">
+              <label className="text-[11px] font-bold text-teal-400 uppercase tracking-tighter block">Account Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-950 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
             <Field label="Account Link" name="link" value={formData.link} onChange={handleChange} />
             <Field label="Security Log" name="security" value={formData.security} onChange={handleChange} />
             <Field label="Creation Date" name="creation_date" value={formData.creation_date} onChange={handleChange} type="date" />

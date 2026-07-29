@@ -10,7 +10,7 @@ export default function AddFb() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', password: '', country: '', rech: '',
-    condition: '', purpose: '', link: '', two_fa: '', two_fa_code: '',
+    condition: '', purpose: '', status: 'Uncompleted', link: '', two_fa: '', two_fa_code: '',
     friends: '', security: '', creation_date: '', dob: '', note: ''
   });
 
@@ -66,6 +66,18 @@ export default function AddFb() {
             <Field label="Country" name="country" value={formData.country} onChange={handleChange} />
             
             <div className="col-span-full mt-4 text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 border-b border-slate-800 pb-2">Status & Metadata</div>
+            <div className="space-y-1.5 flex flex-col relative w-full">
+              <label className="text-[11px] font-bold text-teal-400 uppercase tracking-tighter block">Account Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-950 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
             <Field label="Condition" name="condition" value={formData.condition} onChange={handleChange} />
             <Field label="Purpose" name="purpose" value={formData.purpose} onChange={handleChange} />
             <Field label="Rech" name="rech" value={formData.rech} onChange={handleChange} />

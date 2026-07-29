@@ -10,7 +10,7 @@ export default function AddSpecialGmail() {
 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', password: '', country: '',
-    purpose: '', two_fa: '', two_fa_code: '',
+    purpose: '', status: 'Uncompleted', two_fa: '', two_fa_code: '',
     security: '', creation_date: '', dob: '', device: '', note: '',
     recovery_email: '', recovery_phone: '', first_channel_name: '',
     primary_device: '', primary_location: '', master_password: '',
@@ -88,6 +88,18 @@ export default function AddSpecialGmail() {
             <Field label="Passport Number" name="pass_number" value={formData.pass_number} onChange={handleChange} />
 
             <div className="col-span-full mt-4 text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 border-b border-slate-800 pb-2">Status & Metadata</div>
+            <div className="space-y-1.5 flex flex-col relative w-full">
+              <label className="text-[11px] font-bold text-teal-400 uppercase tracking-tighter block">Account Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-950 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
             <Field label="Purpose" name="purpose" value={formData.purpose} onChange={handleChange} />
             <Field label="Last Device Linked" name="device" value={formData.device} onChange={handleChange} />
             <Field label="Security Log" name="security" value={formData.security} onChange={handleChange} />

@@ -4,11 +4,14 @@ import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 
 export default function EditRecordModal({ account, type, onClose, onSave }: any) {
-  const [formData, setFormData] = useState({ ...account });
+  const [formData, setFormData] = useState({
+    status: 'Uncompleted',
+    ...account,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -71,8 +74,24 @@ export default function EditRecordModal({ account, type, onClose, onSave }: any)
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Status Field */}
+            <div className="flex flex-col gap-1.5 sm:col-span-2 bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+              <label className="text-[10px] font-bold text-teal-400 uppercase tracking-widest pl-1">
+                Account Status (Complete / Uncompleted)
+              </label>
+              <select
+                name="status"
+                value={formData.status || 'Uncompleted'}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded text-sm font-semibold focus:ring-1 focus:ring-indigo-500 outline-none text-slate-100 font-sans"
+              >
+                <option value="Uncompleted">Uncompleted</option>
+                <option value="Complete">Complete</option>
+              </select>
+            </div>
+
             {Object.keys(account).map((key) => {
-              if (excludeFields.includes(key)) return null;
+              if (excludeFields.includes(key) || key === 'status') return null;
               
               const isNote = key === 'note';
               const isPassword = key.includes('password') || key.includes('pass') || key.includes('code');
