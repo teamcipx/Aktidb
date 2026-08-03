@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles, Download, Smartphone, Image } from 'lucide-react';
+import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles, Download, Smartphone, Image, FolderKanban } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -53,6 +53,7 @@ export default function Layout() {
     {
       title: 'Cloud & DevOps',
       items: [
+        { name: 'Add Project', href: '/add-project', icon: FolderKanban, color: 'text-indigo-400', badge: 'New' },
         { name: 'ImgBB API Vault', href: '/imgbb', icon: Image, color: 'text-teal-300', badge: 'Auto-Copy' },
         { name: 'Add Vercel', href: '/add-vercel', icon: Triangle, color: 'text-purple-400' },
         { name: 'Add Supabase', href: '/add-supabase', icon: Database, color: 'text-emerald-400' },

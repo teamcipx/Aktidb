@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image, FolderKanban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -18,6 +18,7 @@ export default function Overview() {
   const [brevoCount, setBrevoCount] = useState<number | null>(null);
   const [vercelCount, setVercelCount] = useState<number | null>(null);
   const [imgbbCount, setImgbbCount] = useState<number | null>(null);
+  const [projectCount, setProjectCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
@@ -33,6 +34,7 @@ export default function Overview() {
       const { count: brevo } = await supabase.from('brevo_accounts').select('*', { count: 'exact', head: true });
       const { count: vercel } = await supabase.from('vercel_accounts').select('*', { count: 'exact', head: true });
       const { count: imgbb } = await supabase.from('imgbb_api_keys').select('*', { count: 'exact', head: true });
+      const { count: project } = await supabase.from('projects').select('*', { count: 'exact', head: true });
       
       setFbCount(fb || 0);
       setGmailCount(gmail || 0);
@@ -44,6 +46,7 @@ export default function Overview() {
       setBrevoCount(brevo || 0);
       setVercelCount(vercel || 0);
       setImgbbCount(imgbb || 0);
+      setProjectCount(project || 0);
       setLoading(false);
     }
     fetchStats();
@@ -58,7 +61,7 @@ export default function Overview() {
     setLoading(true);
     try {
       const tables = [
-        'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
+        'projects', 'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
         'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
         'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys'
       ];
@@ -123,7 +126,7 @@ export default function Overview() {
     setLoading(true);
     try {
       const tables = [
-        'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
+        'projects', 'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
         'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
         'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys'
       ];
@@ -180,6 +183,7 @@ export default function Overview() {
       currentY += 30;
       
       const tableLabels: Record<string, { label: string; colName: string }> = {
+        projects: { label: 'Projects & Core Software Hub', colName: 'Project Name' },
         fb_accounts: { label: 'Facebook Accounts', colName: 'Account Name / ID' },
         gmail_accounts: { label: 'Gmail Accounts', colName: 'Name / ID' },
         supabase_accounts: { label: 'Supabase DB Projects', colName: 'Project Name' },
@@ -284,9 +288,10 @@ export default function Overview() {
     }
   };
 
-  const totalEntries = (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0) + (imgbbCount || 0);
+  const totalEntries = (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0) + (imgbbCount || 0) + (projectCount || 0);
 
   const statCards = [
+    { label: 'Projects', count: projectCount, icon: FolderKanban, color: 'from-indigo-600/20 to-indigo-900/10 border-indigo-500/30 text-indigo-400', glow: 'hover:shadow-indigo-500/20' },
     { label: 'ImgBB Keys', count: imgbbCount, icon: Image, color: 'from-teal-600/20 to-teal-900/10 border-teal-500/30 text-teal-300', glow: 'hover:shadow-teal-500/20' },
     { label: 'Facebook', count: fbCount, icon: Facebook, color: 'from-blue-600/20 to-blue-900/10 border-blue-500/30 text-blue-400', glow: 'hover:shadow-blue-500/20' },
     { label: 'Gmail', count: gmailCount, icon: Mail, color: 'from-red-600/20 to-red-900/10 border-red-500/30 text-red-400', glow: 'hover:shadow-red-500/20' },
@@ -299,6 +304,7 @@ export default function Overview() {
   ];
 
   const quickActions = [
+    { name: 'Add New Project', desc: 'Manage Name, Links, Repo & Keys', href: '/add-project', icon: FolderKanban, color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
     { name: 'ImgBB API Vault', desc: 'Dispense & bulk store API keys', href: '/imgbb', icon: Image, color: 'bg-teal-500/10 text-teal-300 border-teal-500/20' },
     { name: 'Add Vercel Cloud', desc: 'Deployments, tokens & team IDs', href: '/add-vercel', icon: Triangle, color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
     { name: 'Add Supabase DB', desc: 'Project keys, secrets & JWTs', href: '/add-supabase', icon: Database, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },

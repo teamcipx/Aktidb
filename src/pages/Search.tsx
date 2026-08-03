@@ -11,7 +11,7 @@ import EditRecordModal from '../components/EditRecordModal';
 import PdfExportModal from '../components/PdfExportModal';
 
 export default function Search() {
-  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'>('fb');
+  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'|'project'>('fb');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +35,7 @@ export default function Search() {
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
     if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+    if (activeTab === 'project') table = 'projects';
 
     const { error } = await supabase.from(table).update({ status: newStatus }).eq('id', item.id);
     if (!error) {
@@ -162,6 +163,7 @@ export default function Search() {
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
     if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+    if (activeTab === 'project') table = 'projects';
     
     const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
     
@@ -191,6 +193,8 @@ export default function Search() {
     if (activeTab === 'contact') table = 'contact_numbers';
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
+    if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+    if (activeTab === 'project') table = 'projects';
 
     const { error } = await supabase.from(table).delete().eq('id', id);
     if (error) {
@@ -368,6 +372,17 @@ export default function Search() {
         >
           ImgBB Keys
         </button>
+        <button
+          onClick={() => setActiveTab('project')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'project' 
+              ? "border-indigo-500 text-indigo-400 bg-indigo-500/10" 
+              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
+        >
+          Projects Hub
+        </button>
       </div>
 
       {/* Filters Toolbar */}
@@ -465,6 +480,13 @@ export default function Search() {
                         <th className="px-4 py-3">Team ID</th>
                         <th className="px-4 py-3">Purpose</th>
                       </>
+                    ) : activeTab === 'project' ? (
+                      <>
+                        <th className="px-4 py-3">Project Link</th>
+                        <th className="px-4 py-3">GitHub / Vercel</th>
+                        <th className="px-4 py-3">Supabase / Brevo</th>
+                        <th className="px-4 py-3">Purpose</th>
+                      </>
                     ) : (
                       <>
                         <th className="px-4 py-3">Phone</th>
@@ -495,7 +517,7 @@ export default function Search() {
                 filteredData.map((item) => (
                   <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
                     <td className="px-4 py-3 font-semibold text-slate-100">{item.name || '-'}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{item.email || '-'}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">{item.email || item.admin_email || '-'}</td>
                     {activeTab === 'contact' ? (
                       <>
                         <td className="px-4 py-3 text-slate-400 text-xs">{item.phone || '-'}</td>
@@ -511,7 +533,7 @@ export default function Search() {
                         <td className="px-4 py-3 font-mono text-slate-400 text-xs">
                           <div className="flex items-center space-x-2 min-w-[80px]">
                             <span className={cn("transition-all flex-1", !revealedPasswords[item.id] && "opacity-40 blur-[3px] select-none")}>
-                              {revealedPasswords[item.id] ? (item.password || '-') : '••••••••'}
+                              {revealedPasswords[item.id] ? (item.password || item.admin_password || '-') : '••••••••'}
                             </span>
                             <button 
                               onClick={() => setRevealedPasswords(prev => ({...prev, [item.id]: !prev[item.id]}))}
@@ -557,6 +579,29 @@ export default function Search() {
                             <td className="px-4 py-3 text-slate-400 text-xs">{item.team_id || '-'}</td>
                             <td className="px-4 py-3">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-purple-500/10 text-purple-400">
+                                {item.purpose || '-'}
+                              </span>
+                            </td>
+                          </>
+                        ) : activeTab === 'project' ? (
+                          <>
+                            <td className="px-4 py-3 text-xs">
+                              {item.link ? (
+                                <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline font-mono truncate max-w-[150px] inline-block">
+                                  {item.link}
+                                </a>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-slate-400 text-xs">
+                              <div className="font-semibold text-slate-300">{item.github_repo || '-'}</div>
+                              {item.vercel_account && <div className="text-[10px] text-purple-400">{item.vercel_account}</div>}
+                            </td>
+                            <td className="px-4 py-3 text-slate-400 text-xs">
+                              <div className="font-semibold text-emerald-400">{item.supabase_details || '-'}</div>
+                              {item.brevo_account && <div className="text-[10px] text-teal-400">{item.brevo_account}</div>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-500/10 text-indigo-400">
                                 {item.purpose || '-'}
                               </span>
                             </td>

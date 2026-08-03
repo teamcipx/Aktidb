@@ -28,6 +28,7 @@ export default function EditRecordModal({ account, type, onClose, onSave }: any)
       if (type === 'contact') table = 'contact_numbers';
       if (type === 'brevo') table = 'brevo_accounts';
       if (type === 'vercel') table = 'vercel_accounts';
+      if (type === 'project') table = 'projects';
 
       // Clean metadata before sending
       const dataToSave = { ...formData };

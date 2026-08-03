@@ -233,7 +233,7 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
   };
 
   const fields = Object.entries(getVisibleData()).filter(([k]) => k !== 'password');
-  const sensitiveFields = ['two_fa', 'two_fa_code', 'master_password', 'secret_answer', 'db_pass', 'recovery_code', 'nid_number', 'pass_number', 'anon_key', 'phone', 'email', 'api_key', 'smtp_key', 'token'];
+  const sensitiveFields = ['two_fa', 'two_fa_code', 'master_password', 'secret_answer', 'db_pass', 'recovery_code', 'nid_number', 'pass_number', 'anon_key', 'phone', 'email', 'api_key', 'smtp_key', 'token', 'admin_password', 'admin_email', 'link', 'github_repo', 'vercel_account', 'supabase_details', 'ai_studio_details', 'brevo_account'];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
@@ -252,6 +252,7 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
                type === 'contact' ? 'Contact Entry' :
                type === 'brevo' ? 'Brevo Entry' :
                type === 'vercel' ? 'Vercel Entry' :
+               type === 'project' ? 'Project Entry' :
                'Github Entry'}
             </p>
           </div>

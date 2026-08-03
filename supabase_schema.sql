@@ -260,4 +260,29 @@ ALTER TABLE imgbb_api_keys ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read/write for anon" ON imgbb_api_keys;
 CREATE POLICY "Enable read/write for anon" ON imgbb_api_keys FOR ALL USING (true);
 
+-- Projects Table
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  link TEXT,
+  brevo_account TEXT,
+  github_repo TEXT,
+  vercel_account TEXT,
+  supabase_details TEXT,
+  ai_studio_details TEXT,
+  admin_email TEXT,
+  admin_password TEXT,
+  purpose TEXT,
+  status TEXT DEFAULT 'Uncompleted',
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON projects;
+CREATE POLICY "Enable read/write for anon" ON projects FOR ALL USING (true);
+
+
 
