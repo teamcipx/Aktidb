@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Facebook, Eye, EyeOff } from 'lucide-react';
+import { logActivity } from '../lib/logger';
 
 export default function AddFb() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function AddFb() {
     if (error) {
       alert('Error inserting record: ' + error.message);
     } else {
+      logActivity('CREATE', 'FACEBOOK', `Created FB Account "${formData.name || formData.email}"`, `Email: ${formData.email || 'N/A'}, Phone: ${formData.phone || 'N/A'}`);
       setSuccess(true);
       setTimeout(() => navigate('/search'), 1500);
     }

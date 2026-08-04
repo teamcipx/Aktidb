@@ -22,6 +22,7 @@ import ImgbbManager from './pages/ImgbbManager';
 import PublicWorkspace from './pages/PublicWorkspace';
 import Todo from './pages/Todo';
 import AddProject from './pages/AddProject';
+import ActivityLogs from './pages/ActivityLogs';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const isAuthenticated = localStorage.getItem('akti_auth') === 'true';
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="imgbb" element={<ImgbbManager />} />
           <Route path="add-contact" element={<AddContact />} />
           <Route path="add-project" element={<AddProject />} />
+          <Route path="logs" element={<ActivityLogs />} />
         </Route>
       </Routes>
     </Router>

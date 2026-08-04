@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, FolderKanban, Eye, EyeOff, Globe, Github, Triangle, Database, Sparkles, Send, Mail, Lock } from 'lucide-react';
+import { logActivity } from '../lib/logger';
 
 export default function AddProject() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function AddProject() {
     if (error) {
       alert('Error inserting record: ' + error.message + '\n\nPlease ensure you executed the SQL update in supabase_schema.sql.');
     } else {
+      logActivity('CREATE', 'PROJECTS', `Created Project "${formData.name}"`, `Repo: ${formData.github_repo || 'N/A'}, Link: ${formData.link || 'N/A'}`);
       setSuccess(true);
       setTimeout(() => navigate('/search'), 1500);
     }

@@ -260,8 +260,20 @@ ALTER TABLE imgbb_api_keys ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read/write for anon" ON imgbb_api_keys;
 CREATE POLICY "Enable read/write for anon" ON imgbb_api_keys FOR ALL USING (true);
 
--- Projects Table
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+-- Activity Logs Table
+CREATE TABLE IF NOT EXISTS activity_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  action_type TEXT NOT NULL,
+  category TEXT NOT NULL,
+  title TEXT NOT NULL,
+  details TEXT,
+  user_email TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON activity_logs;
+CREATE POLICY "Enable read/write for anon" ON activity_logs FOR ALL USING (true);
 
 CREATE TABLE IF NOT EXISTS projects (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -279,6 +291,8 @@ CREATE TABLE IF NOT EXISTS projects (
   note TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
 
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read/write for anon" ON projects;

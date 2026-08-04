@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Sparkles, Users, Shield, ArrowRight } from 'lucide-react';
+import { logActivity } from '../lib/logger';
 
 export default function Login() {
   const [password, setPassword] = useState('');
@@ -15,6 +16,7 @@ export default function Login() {
     
     if (password === masterPassword) {
       localStorage.setItem('akti_auth', 'true');
+      logActivity('LOGIN', 'AUTH', 'Master Vault Unlocked', 'User authenticated with master password');
       navigate('/');
     } else {
       setError('Incorrect secure vault password');

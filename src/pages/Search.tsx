@@ -9,6 +9,7 @@ import autoTable from 'jspdf-autotable';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 import EditRecordModal from '../components/EditRecordModal';
 import PdfExportModal from '../components/PdfExportModal';
+import { logActivity } from '../lib/logger';
 
 export default function Search() {
   const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'|'project'>('fb');
@@ -39,9 +40,11 @@ export default function Search() {
 
     const { error } = await supabase.from(table).update({ status: newStatus }).eq('id', item.id);
     if (!error) {
+      logActivity('STATUS_CHANGE', activeTab.toUpperCase(), `Changed status to "${newStatus}" for ${item.name || item.email || item.id}`, `Table: ${table}`);
       setData(data.map(d => d.id === item.id ? { ...d, status: newStatus } : d));
     } else {
       console.warn('Could not update status in DB, updating local view:', error.message);
+      logActivity('STATUS_CHANGE', activeTab.toUpperCase(), `Changed status to "${newStatus}" for ${item.name || item.email || item.id}`, `Table: ${table}`);
       setData(data.map(d => d.id === item.id ? { ...d, status: newStatus } : d));
     }
   };
@@ -200,6 +203,7 @@ export default function Search() {
     if (error) {
       alert('Error deleting entry: ' + error.message);
     } else {
+      logActivity('DELETE', activeTab.toUpperCase(), `Deleted ${activeTab.replace('_', ' ')} record`, `Removed entry ID ${id} from table ${table}`);
       setData(data.filter(item => item.id !== id));
     }
   };

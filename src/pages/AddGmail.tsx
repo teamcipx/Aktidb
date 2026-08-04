@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Mail, Eye, EyeOff } from 'lucide-react';
+import { logActivity } from '../lib/logger';
 
 export default function AddGmail() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function AddGmail() {
     if (error) {
       alert('Error inserting record: ' + error.message);
     } else {
+      logActivity('CREATE', 'GMAIL', `Created Gmail Account "${formData.email || formData.name}"`, `Phone: ${formData.phone || 'N/A'}, Device: ${formData.device || 'N/A'}`);
       setSuccess(true);
       setTimeout(() => navigate('/search'), 1500);
     }

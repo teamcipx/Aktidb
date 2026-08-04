@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, ShieldAlert } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
+import { logActivity } from '../lib/logger';
 
 export default function EditRecordModal({ account, type, onClose, onSave }: any) {
   const [formData, setFormData] = useState({
@@ -38,6 +39,8 @@ export default function EditRecordModal({ account, type, onClose, onSave }: any)
       
       if (dbError) throw dbError;
       
+      logActivity('UPDATE', type.toUpperCase(), `Updated ${type.replace('_', ' ')} record "${formData.name || formData.email || account.id}"`, `Fields updated in ${table}`);
+
       onSave(dataToSave);
     } catch (err: any) {
       setError(err.message);

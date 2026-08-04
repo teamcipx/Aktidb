@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image, FolderKanban } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image, FolderKanban, Terminal, Activity } from 'lucide-react';
+import { logActivity, getActivityLogs, ActivityLog } from '../lib/logger';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -19,10 +20,13 @@ export default function Overview() {
   const [vercelCount, setVercelCount] = useState<number | null>(null);
   const [imgbbCount, setImgbbCount] = useState<number | null>(null);
   const [projectCount, setProjectCount] = useState<number | null>(null);
+  const [recentLogs, setRecentLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   useEffect(() => {
+    logActivity('DASHBOARD', 'SYSTEM', 'Overview Command Center Accessed', 'User navigated to Overview Dashboard');
+
     async function fetchStats() {
       const { count: fb } = await supabase.from('fb_accounts').select('*', { count: 'exact', head: true });
       const { count: gmail } = await supabase.from('gmail_accounts').select('*', { count: 'exact', head: true });
@@ -47,6 +51,10 @@ export default function Overview() {
       setVercelCount(vercel || 0);
       setImgbbCount(imgbb || 0);
       setProjectCount(project || 0);
+
+      const logs = await getActivityLogs(6);
+      setRecentLogs(logs);
+
       setLoading(false);
     }
     fetchStats();
@@ -415,6 +423,52 @@ export default function Overview() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Terminal Live Activity Widget */}
+      <div className="bg-slate-950 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl font-mono text-xs">
+        <div className="bg-slate-900/90 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2 ml-1">
+              <Terminal className="w-3.5 h-3.5 text-emerald-400" /> Live Terminal Activity Log
+            </span>
+          </div>
+          <Link to="/logs" className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-1">
+            <span>Open Full Terminal</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+
+        <div className="p-3.5 space-y-2 bg-slate-950/95 font-mono text-[11px]">
+          {recentLogs.length === 0 ? (
+            <p className="text-slate-600 italic">No activity recorded yet.</p>
+          ) : (
+            recentLogs.map((log) => {
+              const dateObj = new Date(log.created_at);
+              const formattedDate = isNaN(dateObj.getTime()) ? log.created_at : format(dateObj, 'HH:mm:ss');
+              let badgeColor = 'text-slate-400 border-slate-700 bg-slate-800/40';
+              if (log.action_type === 'LOGIN') badgeColor = 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+              if (log.action_type === 'CREATE') badgeColor = 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10';
+              if (log.action_type === 'UPDATE') badgeColor = 'text-amber-300 border-amber-500/30 bg-amber-500/10';
+              if (log.action_type === 'DELETE') badgeColor = 'text-rose-400 border-rose-500/30 bg-rose-500/10';
+              if (log.action_type === 'DASHBOARD') badgeColor = 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10';
+
+              return (
+                <div key={log.id} className="flex items-center space-x-2 text-slate-300 truncate">
+                  <span className="text-slate-500 font-semibold">[{formattedDate}]</span>
+                  <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${badgeColor}`}>
+                    {log.action_type}
+                  </span>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold">[{log.category}]</span>
+                  <span className="truncate text-slate-200">{log.title}</span>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
