@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2, Edit2, Check, Clock, CheckCircle2 } from 'lucide-react';
+import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2, Edit2, Check, Clock, CheckCircle2, QrCode } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { toPng } from 'html-to-image';
@@ -9,15 +9,17 @@ import autoTable from 'jspdf-autotable';
 import AccountDetailsModal from '../components/AccountDetailsModal';
 import EditRecordModal from '../components/EditRecordModal';
 import PdfExportModal from '../components/PdfExportModal';
+import QRCodeModal from '../components/QRCodeModal';
 import { logActivity } from '../lib/logger';
 
 export default function Search() {
-  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'|'project'>('fb');
+  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'|'freeimg'|'project'>('fb');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [qrModalItem, setQrModalItem] = useState<any | null>(null);
   
   // Basic filtering
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -36,6 +38,7 @@ export default function Search() {
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
     if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+    if (activeTab === 'freeimg') table = 'freeimg_api_keys';
     if (activeTab === 'project') table = 'projects';
 
     const { error } = await supabase.from(table).update({ status: newStatus }).eq('id', item.id);
@@ -166,6 +169,7 @@ export default function Search() {
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
     if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+    if (activeTab === 'freeimg') table = 'freeimg_api_keys';
     if (activeTab === 'project') table = 'projects';
     
     const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
@@ -197,6 +201,7 @@ export default function Search() {
     if (activeTab === 'brevo') table = 'brevo_accounts';
     if (activeTab === 'vercel') table = 'vercel_accounts';
     if (activeTab === 'imgbb') table = 'imgbb_api_keys';
+    if (activeTab === 'freeimg') table = 'freeimg_api_keys';
     if (activeTab === 'project') table = 'projects';
 
     const { error } = await supabase.from(table).delete().eq('id', id);
@@ -375,6 +380,17 @@ export default function Search() {
           )}
         >
           ImgBB Keys
+        </button>
+        <button
+          onClick={() => setActiveTab('freeimg')}
+          className={cn(
+            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
+            activeTab === 'freeimg' 
+              ? "border-cyan-500 text-cyan-300 bg-cyan-500/10" 
+              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
+        >
+          FreeImg Keys
         </button>
         <button
           onClick={() => setActiveTab('project')}
@@ -641,6 +657,13 @@ export default function Search() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        <button
+                           onClick={() => setQrModalItem(item)}
+                           className="inline-flex items-center justify-center p-1.5 text-violet-400 hover:text-violet-300 hover:bg-slate-800/50 rounded border border-transparent hover:border-violet-500/20 transition-all font-semibold"
+                           title="Scan Credential QR Code"
+                        >
+                           <QrCode className="w-4 h-4" />
+                        </button>
                         <button 
                            onClick={() => setSelectedAccount(item)}
                            className="inline-flex items-center justify-center p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-slate-800/50 rounded border border-transparent hover:border-indigo-500/20 transition-all font-semibold"
@@ -703,6 +726,15 @@ export default function Search() {
         subtitle="Select whether to include passwords in the exported PDF."
         recordCount={filteredData.length}
       />
+
+      {qrModalItem && (
+        <QRCodeModal
+          title={`${qrModalItem.name || 'Account'} QR Code`}
+          subtitle={`Quick scanning for ${qrModalItem.name || qrModalItem.email || 'this record'}`}
+          data={qrModalItem}
+          onClose={() => setQrModalItem(null)}
+        />
+      )}
     </div>
   );
 }

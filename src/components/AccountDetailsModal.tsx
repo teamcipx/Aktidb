@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { X, Download, FileText, Image as ImageIcon, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { X, Download, FileText, Image as ImageIcon, Eye, EyeOff, Copy, Check, QrCode } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
+import QRCodeModal from './QRCodeModal';
 
 export default function AccountDetailsModal({ account, type, onClose }: any) {
   const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [qrModalData, setQrModalData] = useState<{ title?: string; subtitle?: string; data?: any; value?: string } | null>(null);
 
   if (!account) return null;
 
@@ -257,6 +259,18 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
             </p>
           </div>
           <div className="flex items-center space-x-1 sm:space-x-2">
+             <button
+               onClick={() => setQrModalData({
+                 title: `${account.name || 'Account'} QR Code`,
+                 subtitle: `Scan credentials for ${account.name || account.email || 'this record'} to mobile`,
+                 data: account
+               })}
+               title="Generate QR Code"
+               className="p-2.5 text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded transition-all flex items-center gap-1 text-xs font-bold"
+             >
+               <QrCode className="w-4 h-4" />
+               <span className="hidden sm:inline">QR Code</span>
+             </button>
              <button onClick={exportCSV} title="Export CSV" className="p-2.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 hover:border-slate-700 border border-transparent rounded transition-all">
                <Download className="w-4 h-4" />
              </button>
@@ -350,15 +364,28 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
                     <div className="flex justify-between items-center">
                       <span className={cn("text-sm break-words flex-1", isSensitive ? "font-mono font-bold text-slate-200" : "font-semibold text-slate-200")}>{displayValue}</span>
                       {isSensitive && (
-                        <button
-                          onClick={() => handleCopy(String(value), key)}
-                          className={cn("p-1.5 rounded-md transition-all ml-2 export-hide", 
-                            copiedField === key ? "text-emerald-400 bg-emerald-500/10" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800 opacity-0 group-hover:opacity-100"
-                          )}
-                          title="Copy"
-                        >
-                          {copiedField === key ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        </button>
+                        <div className="flex items-center space-x-1 ml-2 export-hide">
+                          <button
+                            onClick={() => setQrModalData({
+                              title: `${displayKey.toUpperCase()} QR Code`,
+                              subtitle: `Scan ${displayKey} to mobile`,
+                              value: String(value)
+                            })}
+                            className="p-1.5 rounded-md text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-all opacity-0 group-hover:opacity-100"
+                            title="Generate QR Code"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCopy(String(value), key)}
+                            className={cn("p-1.5 rounded-md transition-all", 
+                              copiedField === key ? "text-emerald-400 bg-emerald-500/10" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800 opacity-0 group-hover:opacity-100"
+                            )}
+                            title="Copy"
+                          >
+                            {copiedField === key ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -382,6 +409,16 @@ export default function AccountDetailsModal({ account, type, onClose }: any) {
           </div>
         </div>
       </div>
+
+      {qrModalData && (
+        <QRCodeModal
+          title={qrModalData.title}
+          subtitle={qrModalData.subtitle}
+          data={qrModalData.data}
+          value={qrModalData.value}
+          onClose={() => setQrModalData(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles, Download, Smartphone, Image, FolderKanban, Terminal } from 'lucide-react';
+import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles, Download, Smartphone, Image, FolderKanban, Terminal, Fingerprint, Clock, Shield } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
+import BiometricSettingsModal from './BiometricSettingsModal';
+import { useIdleTimeout } from '../hooks/useIdleTimeout';
 
 export default function Layout() {
   const location = useLocation();
@@ -9,6 +11,9 @@ export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showBioModal, setShowBioModal] = useState(false);
+
+  const { secondsRemaining, showWarning, resetTimer } = useIdleTimeout();
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -55,7 +60,8 @@ export default function Layout() {
       title: 'Cloud & DevOps',
       items: [
         { name: 'Add Project', href: '/add-project', icon: FolderKanban, color: 'text-indigo-400', badge: 'New' },
-        { name: 'ImgBB API Vault', href: '/imgbb', icon: Image, color: 'text-teal-300', badge: 'Auto-Copy' },
+        { name: 'ImgBB API Vault', href: '/imgbb', icon: Image, color: 'text-teal-400', badge: 'Teal' },
+        { name: 'FreeImg Host Vault', href: '/freeimg', icon: Image, color: 'text-amber-400', badge: 'Flame' },
         { name: 'Add Vercel', href: '/add-vercel', icon: Triangle, color: 'text-purple-400' },
         { name: 'Add Supabase', href: '/add-supabase', icon: Database, color: 'text-emerald-400' },
         { name: 'Add Github', href: '/add-github', icon: Github, color: 'text-slate-300' },
@@ -199,23 +205,67 @@ export default function Layout() {
             </div>
             <div className="ml-3 min-w-0 flex-1">
               <p className="text-xs font-bold text-slate-200 truncate">ZX Administrator</p>
-              <p className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span> Vault Unlocked
-              </p>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span> Vault Unlocked
+                </p>
+                <span className="text-[9px] text-amber-400 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20" title="30 Minute Idle Timeout Active">
+                  30m Auto Lock
+                </span>
+              </div>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="group flex w-full items-center justify-center px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-slate-800/80 text-slate-300 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-slate-700/60 transition-all duration-200"
-          >
-            <LogOut className="mr-2 h-4 w-4 text-slate-400 group-hover:text-rose-400 transition-colors" />
-            Lock & Sign Out
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setShowBioModal(true)}
+              className="group flex items-center justify-center px-2 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 border border-teal-500/30 transition-all"
+              title="Configure Fingerprint / Face ID Passkeys"
+            >
+              <Fingerprint className="mr-1.5 h-3.5 w-3.5 text-teal-400 group-hover:scale-110 transition-transform" />
+              <span>Passkeys</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="group flex items-center justify-center px-2 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg bg-slate-800/80 text-slate-300 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-slate-700/60 transition-all"
+            >
+              <LogOut className="mr-1.5 h-3.5 w-3.5 text-slate-400 group-hover:text-rose-400 transition-colors" />
+              <span>Lock</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto w-full bg-slate-950/90">
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto w-full bg-slate-950/90 relative">
+        {/* Floating Idle Timeout Warning Banner */}
+        {showWarning && (
+          <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-600 text-slate-950 font-sans p-3 px-4 shadow-2xl flex items-center justify-between sticky top-0 z-50 border-b border-amber-400 animate-fade-in shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="p-1.5 rounded-lg bg-slate-950/20 text-slate-950">
+                <Clock className="w-5 h-5 animate-spin" />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider">
+                  Session Timeout Warning
+                </p>
+                <p className="text-[11px] font-bold opacity-90">
+                  Logged out due to 30m inactivity in{' '}
+                  <span className="font-mono underline font-extrabold text-sm">
+                    {Math.floor(secondsRemaining / 60).toString().padStart(2, '0')}:
+                    {(secondsRemaining % 60).toString().padStart(2, '0')}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={resetTimer}
+              className="px-3.5 py-1.5 bg-slate-950 hover:bg-slate-900 text-amber-300 rounded-xl text-xs font-extrabold uppercase tracking-wider shadow-md transition-all hover:scale-105 active:scale-95"
+            >
+              Extend Session
+            </button>
+          </div>
+        )}
+
         {/* Mobile Header Bar */}
         <div className="md:hidden flex items-center justify-between bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 p-4 shrink-0 sticky top-0 z-30">
           <Link to="/" className="flex items-center space-x-2.5">
@@ -224,14 +274,27 @@ export default function Layout() {
             </div>
             <span className="text-lg font-extrabold tracking-tight text-white font-display">ZX HUB</span>
           </Link>
-          <button onClick={() => setIsSidebarOpen(true)} className="text-slate-300 hover:bg-slate-800 p-2 rounded-lg border border-slate-800">
-            <Menu className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowBioModal(true)}
+              className="text-teal-400 hover:bg-slate-800 p-2 rounded-lg border border-slate-800"
+              title="Biometrics"
+            >
+              <Fingerprint className="w-5 h-5" />
+            </button>
+            <button onClick={() => setIsSidebarOpen(true)} className="text-slate-300 hover:bg-slate-800 p-2 rounded-lg border border-slate-800">
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 p-4 md:p-8">
           <Outlet />
         </div>
       </main>
+
+      {showBioModal && (
+        <BiometricSettingsModal onClose={() => setShowBioModal(false)} />
+      )}
     </div>
   );
 }

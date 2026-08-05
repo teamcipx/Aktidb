@@ -19,6 +19,7 @@ import AddBrevo from './pages/AddBrevo';
 import AddVercel from './pages/AddVercel';
 import AddContact from './pages/AddContact';
 import ImgbbManager from './pages/ImgbbManager';
+import FreeimgManager from './pages/FreeimgManager';
 import PublicWorkspace from './pages/PublicWorkspace';
 import Todo from './pages/Todo';
 import AddProject from './pages/AddProject';
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="add-brevo" element={<AddBrevo />} />
           <Route path="add-vercel" element={<AddVercel />} />
           <Route path="imgbb" element={<ImgbbManager />} />
+          <Route path="freeimg" element={<FreeimgManager />} />
           <Route path="add-contact" element={<AddContact />} />
           <Route path="add-project" element={<AddProject />} />
           <Route path="logs" element={<ActivityLogs />} />

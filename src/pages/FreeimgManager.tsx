@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Image, Key, Copy, Trash2, Plus, Zap, CheckCircle2, AlertCircle, RefreshCw, Sparkles, Layers, ShieldCheck, FileText, Check, QrCode } from 'lucide-react';
+import { Image, Key, Copy, Trash2, Plus, Zap, CheckCircle2, AlertCircle, RefreshCw, ShieldCheck, Check, Sparkles, QrCode } from 'lucide-react';
+import { logActivity } from '../lib/logger';
 import QRCodeModal from '../components/QRCodeModal';
 
-interface ImgbbKey {
+interface FreeimgKey {
   id: string;
   api_key: string;
   note?: string;
@@ -11,10 +12,10 @@ interface ImgbbKey {
   created_at: string;
 }
 
-const LOCAL_STORAGE_KEY = 'zxhub_imgbb_api_keys_backup';
+const LOCAL_STORAGE_KEY = 'zxhub_freeimg_api_keys_backup';
 
-export default function ImgbbManager() {
-  const [keys, setKeys] = useState<ImgbbKey[]>([]);
+export default function FreeimgManager() {
+  const [keys, setKeys] = useState<FreeimgKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [dispenseLoading, setDispenseLoading] = useState(false);
@@ -32,7 +33,7 @@ export default function ImgbbManager() {
     copiedKeys: string[];
     count: number;
   } | null>(null);
-  const [qrKeyModal, setQrKeyModal] = useState<ImgbbKey | null>(null);
+  const [qrKeyModal, setQrKeyModal] = useState<FreeimgKey | null>(null);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +43,7 @@ export default function ImgbbManager() {
     fetchKeys();
   }, []);
 
-  const getLocalKeys = (): ImgbbKey[] => {
+  const getLocalKeys = (): FreeimgKey[] => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
       return saved ? JSON.parse(saved) : [];
@@ -51,7 +52,7 @@ export default function ImgbbManager() {
     }
   };
 
-  const saveLocalKeys = (list: ImgbbKey[]) => {
+  const saveLocalKeys = (list: FreeimgKey[]) => {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
     } catch (e) {
@@ -64,12 +65,12 @@ export default function ImgbbManager() {
     setErrorMsg('');
     try {
       const { data, error } = await supabase
-        .from('imgbb_api_keys')
+        .from('freeimg_api_keys')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('Supabase fetch error, using local storage fallback:', error.message);
+        console.warn('Supabase fetch error for freeimg, using local storage fallback:', error.message);
         const local = getLocalKeys();
         setKeys(local);
       } else {
@@ -91,7 +92,7 @@ export default function ImgbbManager() {
     setSuccessMsg('');
 
     if (!rawInput.trim()) {
-      setErrorMsg('Please enter at least one ImgBB API key.');
+      setErrorMsg('Please enter at least one FreeImage Host API key.');
       return;
     }
 
@@ -110,34 +111,36 @@ export default function ImgbbManager() {
 
     const newRecords = lines.map(keyStr => ({
       api_key: keyStr,
-      note: noteInput.trim() || 'ImgBB API Key',
+      note: noteInput.trim() || 'FreeImg API Key',
       status: statusInput,
       created_at: new Date().toISOString()
     }));
 
     try {
       const { data, error } = await supabase
-        .from('imgbb_api_keys')
+        .from('freeimg_api_keys')
         .insert(newRecords)
         .select();
 
       if (error) {
         console.warn('Supabase insert warning, saving locally:', error.message);
-        // Fallback local save with pseudo IDs
         const localCurrent = getLocalKeys();
-        const fallbackItems: ImgbbKey[] = newRecords.map((r, idx) => ({
+        const fallbackItems: FreeimgKey[] = newRecords.map((r, idx) => ({
           id: `local-${Date.now()}-${idx}`,
           api_key: r.api_key,
           note: r.note,
+          status: r.status,
           created_at: r.created_at
         }));
         const updated = [...fallbackItems, ...localCurrent];
         setKeys(updated);
         saveLocalKeys(updated);
-        setSuccessMsg(`Successfully stored ${fallbackItems.length} ImgBB API key(s) locally!`);
+        setSuccessMsg(`Successfully stored ${fallbackItems.length} FreeImage Host API key(s) locally!`);
+        logActivity('CREATE', 'FREEIMG', `Stored ${fallbackItems.length} FreeImg API Key(s) (Local Backup)`);
       } else {
         const added = data || [];
-        setSuccessMsg(`Successfully stored ${added.length} ImgBB API key(s) in Vault!`);
+        setSuccessMsg(`Successfully stored ${added.length} FreeImage Host API key(s) in Vault!`);
+        logActivity('CREATE', 'FREEIMG', `Stored ${added.length} FreeImage Host API Key(s) in Vault`);
         await fetchKeys();
       }
 
@@ -162,7 +165,7 @@ export default function ImgbbManager() {
     }
 
     if (keys.length === 0) {
-      setErrorMsg('No ImgBB API keys available in storage! Please submit new keys first.');
+      setErrorMsg('No FreeImage Host API keys available in storage! Please submit new keys first.');
       return;
     }
 
@@ -183,7 +186,7 @@ export default function ImgbbManager() {
 
       // Delete consumed keys from Supabase
       const { error } = await supabase
-        .from('imgbb_api_keys')
+        .from('freeimg_api_keys')
         .delete()
         .in('id', targetIds);
 
@@ -196,7 +199,9 @@ export default function ImgbbManager() {
       setKeys(remainingKeys);
       saveLocalKeys(remainingKeys);
 
-      // Open Success modal/card
+      logActivity('DELETE', 'FREEIMG', `Dispensed & Auto-Consumed ${keyStrings.length} FreeImg Key(s)`, `Copied to clipboard and deleted from vault`);
+
+      // Open Success modal
       setDispenseSuccessModal({
         copiedKeys: keyStrings,
         count: keyStrings.length
@@ -210,24 +215,27 @@ export default function ImgbbManager() {
     }
   };
 
-  const handleCopySingleKey = async (keyItem: ImgbbKey) => {
+  const handleCopySingleKey = async (keyItem: FreeimgKey) => {
     try {
       await navigator.clipboard.writeText(keyItem.api_key);
       setCopiedKeyId(keyItem.id);
+      logActivity('EXPORT', 'FREEIMG', `Copied FreeImg API Key`, `Key ID: ${keyItem.id}`);
       setTimeout(() => setCopiedKeyId(null), 2000);
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleToggleKeyStatus = async (keyItem: ImgbbKey) => {
+  const handleToggleKeyStatus = async (keyItem: FreeimgKey) => {
     const newStatus = keyItem.status === 'Complete' ? 'Uncompleted' : 'Complete';
     const updatedKeys = keys.map(k => k.id === keyItem.id ? { ...k, status: newStatus } : k);
     setKeys(updatedKeys);
     saveLocalKeys(updatedKeys);
 
+    logActivity('STATUS_CHANGE', 'FREEIMG', `Toggled status to "${newStatus}"`, `Key ID: ${keyItem.id}`);
+
     try {
-      await supabase.from('imgbb_api_keys').update({ status: newStatus }).eq('id', keyItem.id);
+      await supabase.from('freeimg_api_keys').update({ status: newStatus }).eq('id', keyItem.id);
     } catch (e) {
       console.error(e);
     }
@@ -236,23 +244,25 @@ export default function ImgbbManager() {
   const handleDeleteSingleKey = async (id: string) => {
     if (!confirm('Are you sure you want to delete this key?')) return;
     try {
-      await supabase.from('imgbb_api_keys').delete().eq('id', id);
+      await supabase.from('freeimg_api_keys').delete().eq('id', id);
       const updated = keys.filter(k => k.id !== id);
       setKeys(updated);
       saveLocalKeys(updated);
+      logActivity('DELETE', 'FREEIMG', `Deleted single FreeImg API Key`, `ID: ${id}`);
     } catch (e) {
       console.error(e);
     }
   };
 
   const handleClearAll = async () => {
-    if (!confirm(`Are you sure you want to delete ALL ${keys.length} ImgBB API keys? This cannot be undone.`)) return;
+    if (!confirm(`Are you sure you want to delete ALL ${keys.length} FreeImage Host API keys? This cannot be undone.`)) return;
     try {
       const ids = keys.map(k => k.id);
-      await supabase.from('imgbb_api_keys').delete().in('id', ids);
+      await supabase.from('freeimg_api_keys').delete().in('id', ids);
       setKeys([]);
       saveLocalKeys([]);
-      setSuccessMsg('All keys cleared from vault.');
+      setSuccessMsg('All FreeImage Host keys cleared from vault.');
+      logActivity('DELETE', 'FREEIMG', `Cleared ALL FreeImg API Keys (${ids.length} keys deleted)`);
     } catch (e) {
       console.error(e);
     }
@@ -265,35 +275,35 @@ export default function ImgbbManager() {
 
   return (
     <div className="space-y-6 flex flex-col h-full font-sans text-slate-100 max-w-7xl mx-auto">
-      {/* Top Header - Emerald Teal Theme */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 border border-teal-500/20 p-5 rounded-2xl backdrop-blur-xl shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-l from-teal-500/10 via-emerald-500/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+      {/* Top Header - Flame Amber Theme */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 border border-amber-500/20 p-5 rounded-2xl backdrop-blur-xl shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-l from-amber-500/10 via-orange-500/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="flex items-center space-x-3 z-10">
-          <div className="p-3 bg-gradient-to-tr from-teal-500 via-emerald-500 to-green-600 rounded-xl shadow-lg shadow-teal-500/20 text-white">
+          <div className="p-3 bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 rounded-xl shadow-lg shadow-amber-500/20 text-white">
             <Image className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-extrabold text-white uppercase tracking-wider font-display">
-                ImgBB.com API Storage & Dispenser
+                FreeImage.host API Storage & Dispenser
               </h1>
-              <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-teal-400" /> Emerald Teal Theme
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" /> Flame Amber Theme
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Dedicated ImgBB.com key vault. Enter an amount to automatically copy keys to clipboard and auto-consume from database.
+              Dedicated FreeImage.host key vault. Enter an amount to automatically copy keys to clipboard and auto-consume from database.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 z-10">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-950/80 border border-teal-500/30 rounded-xl">
-            <Key className="w-4 h-4 text-teal-400" />
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-950/80 border border-amber-500/30 rounded-xl">
+            <Key className="w-4 h-4 text-amber-400" />
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Available Keys</span>
-              <span className="text-base font-extrabold text-teal-300 leading-none">{keys.length}</span>
+              <span className="text-base font-extrabold text-amber-300 leading-none">{keys.length}</span>
             </div>
           </div>
           <button
@@ -302,7 +312,7 @@ export default function ImgbbManager() {
             className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all active:scale-95"
             title="Refresh Vault"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-teal-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
           </button>
         </div>
       </div>
@@ -332,31 +342,31 @@ export default function ImgbbManager() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* DISPENSER CARD (Amount -> Copy & Delete) */}
-        <div className="lg:col-span-5 bg-gradient-to-b from-indigo-950/40 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none text-indigo-400">
+        <div className="lg:col-span-5 bg-gradient-to-b from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none text-amber-400">
             <Zap className="w-32 h-32" />
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
                 <Zap className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-extrabold uppercase tracking-wider text-white">Instant Key Dispenser</h2>
-                <span className="text-[11px] font-semibold text-indigo-300">Amount enter = Auto Copy & Delete</span>
+                <h2 className="text-sm font-extrabold uppercase tracking-wider text-white">FreeImg Instant Dispenser</h2>
+                <span className="text-[11px] font-semibold text-amber-300">Amount enter = Auto Copy & Delete</span>
               </div>
             </div>
 
             <p className="text-xs text-slate-300 mb-5 leading-relaxed bg-slate-950/50 p-3.5 rounded-xl border border-slate-800/80">
-              Enter required amount of keys. Pressing <kbd className="px-1.5 py-0.5 bg-slate-800 text-indigo-300 rounded text-[10px] font-mono border border-slate-700">Enter</kbd> or clicking dispense will copy those keys to your clipboard and immediately consume (delete) them from vault.
+              Enter required amount of keys. Pressing <kbd className="px-1.5 py-0.5 bg-slate-800 text-amber-300 rounded text-[10px] font-mono border border-slate-700">Enter</kbd> or clicking dispense will copy those keys to your clipboard and immediately consume (delete) them from vault.
             </p>
 
             <form onSubmit={handleDispense} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
                   <span>Enter Amount / Quantity</span>
-                  <span className="text-[10px] text-teal-400 font-normal">Stock: {keys.length} keys</span>
+                  <span className="text-[10px] text-amber-400 font-normal">Stock: {keys.length} keys</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -372,7 +382,7 @@ export default function ImgbbManager() {
                       }
                     }}
                     placeholder="Enter amount e.g. 1, 5, 10"
-                    className="w-full px-4 py-3 bg-slate-950 border border-indigo-500/40 rounded-xl text-lg font-bold text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono tracking-wider shadow-inner"
+                    className="w-full px-4 py-3 bg-slate-950 border border-amber-500/40 rounded-xl text-lg font-bold text-white focus:ring-2 focus:ring-amber-500 outline-none font-mono tracking-wider shadow-inner"
                   />
                   <div className="absolute right-2 flex items-center gap-1">
                     {[1, 3, 5, 10].map((preset) => (
@@ -382,7 +392,7 @@ export default function ImgbbManager() {
                         onClick={() => setAmount(preset)}
                         className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-all ${
                           Number(amount) === preset
-                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            ? 'bg-amber-600 text-white border-amber-500'
                             : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                         }`}
                       >
@@ -396,7 +406,7 @@ export default function ImgbbManager() {
               <button
                 type="submit"
                 disabled={dispenseLoading || keys.length === 0}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-teal-500 via-indigo-600 to-purple-600 hover:from-teal-400 hover:via-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold uppercase tracking-widest rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 hover:from-amber-400 hover:via-orange-500 hover:to-rose-500 text-white text-xs font-extrabold uppercase tracking-widest rounded-xl shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
               >
                 {dispenseLoading ? (
                   <>
@@ -417,21 +427,21 @@ export default function ImgbbManager() {
             <span className="flex items-center gap-1.5 text-emerald-400">
               <ShieldCheck className="w-3.5 h-3.5" /> Direct Clipboard Access
             </span>
-            <span className="text-slate-500">Auto-Purge Active</span>
+            <span className="text-amber-400/80 font-bold">FreeImg Auto-Purge</span>
           </div>
         </div>
 
         {/* BULK STORAGE SUBMIT CARD */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-slate-900 border border-amber-500/20 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-extrabold uppercase tracking-wider text-white">Store ImgBB API Keys</h2>
-                  <span className="text-[11px] font-semibold text-teal-300">Submit single or multi-line bulk keys</span>
+                  <h2 className="text-sm font-extrabold uppercase tracking-wider text-white">Store FreeImage.host Keys</h2>
+                  <span className="text-[11px] font-semibold text-amber-300">Submit single or multi-line bulk keys</span>
                 </div>
               </div>
             </div>
@@ -439,18 +449,18 @@ export default function ImgbbManager() {
             <form onSubmit={handleSubmitKeys} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  ImgBB API Key(s) <span className="text-rose-400">*</span>
+                  FreeImage Host API Key(s) <span className="text-rose-400">*</span>
                 </label>
                 <textarea
                   rows={4}
                   value={rawInput}
                   onChange={(e) => setRawInput(e.target.value)}
-                  placeholder="Paste ImgBB API key(s) here. Multiple keys can be separated by newlines, commas or spaces e.g.
-3b84f29a01...
-9e01d3a772...
-a82f102c91..."
+                  placeholder="Paste FreeImage Host API key(s) here. Multiple keys can be separated by newlines, commas or spaces e.g.
+6d045ab...
+8f192bc...
+2a7719d..."
                   required
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none resize-none leading-relaxed"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-100 focus:ring-1 focus:ring-amber-500 outline-none resize-none leading-relaxed"
                 />
               </div>
 
@@ -463,19 +473,19 @@ a82f102c91..."
                     type="text"
                     value={noteInput}
                     onChange={(e) => setNoteInput(e.target.value)}
-                    placeholder="e.g. Batch 2026, Free tier"
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+                    placeholder="e.g. FreeImage batch 1, Pro tier"
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus:ring-1 focus:ring-amber-500 outline-none"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-teal-400">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
                     Status
                   </label>
                   <select
                     value={statusInput}
                     onChange={(e) => setStatusInput(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-100 focus:ring-1 focus:ring-amber-500 outline-none"
                   >
                     <option value="Uncompleted">Uncompleted</option>
                     <option value="Complete">Complete</option>
@@ -487,7 +497,7 @@ a82f102c91..."
                 <button
                   type="submit"
                   disabled={submitLoading}
-                  className="px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold uppercase tracking-widest rounded-xl shadow-md flex items-center space-x-2 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
+                  className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold uppercase tracking-widest rounded-xl shadow-md flex items-center space-x-2 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
                 >
                   {submitLoading ? (
                     <>
@@ -511,20 +521,20 @@ a82f102c91..."
       {/* DISPENSED RESULT MODAL */}
       {dispenseSuccessModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-slate-900 border border-teal-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center space-x-3 text-teal-400 border-b border-slate-800 pb-3">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3 text-amber-400 border-b border-slate-800 pb-3">
               <CheckCircle2 className="w-6 h-6 shrink-0" />
               <div>
                 <h3 className="text-base font-extrabold uppercase tracking-wider text-white">
                   {dispenseSuccessModal.count} Key(s) Copied & Deleted!
                 </h3>
-                <p className="text-xs text-teal-300">Keys are already copied to your clipboard and consumed from vault.</p>
+                <p className="text-xs text-amber-300">Keys are already copied to your clipboard and consumed from vault.</p>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Copied Keys Preview:</label>
-              <pre className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-teal-300 max-h-48 overflow-y-auto whitespace-pre-wrap break-all">
+              <pre className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-amber-300 max-h-48 overflow-y-auto whitespace-pre-wrap break-all">
                 {dispenseSuccessModal.copiedKeys.join('\n')}
               </pre>
             </div>
@@ -533,7 +543,7 @@ a82f102c91..."
               <span className="text-xs text-slate-400">Remaining Keys in Vault: <strong className="text-white">{keys.length}</strong></span>
               <button
                 onClick={() => setDispenseSuccessModal(null)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
               >
                 Close & Done
               </button>
@@ -543,13 +553,13 @@ a82f102c91..."
       )}
 
       {/* VAULT STORED KEYS TABLE */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg flex-1 flex flex-col">
+      <div className="bg-slate-900 border border-amber-500/20 rounded-2xl overflow-hidden shadow-lg flex-1 flex flex-col">
         {/* Table Header Controls */}
         <div className="p-4 border-b border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-950/40">
           <div className="flex items-center space-x-2 w-full sm:w-auto">
-            <Key className="w-4 h-4 text-teal-400" />
+            <Key className="w-4 h-4 text-amber-400" />
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">
-              Stored ImgBB API Vault ({filteredKeys.length})
+              Stored FreeImage.host API Vault ({filteredKeys.length})
             </h3>
           </div>
 
@@ -559,7 +569,7 @@ a82f102c91..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Filter keys or note..."
-              className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:ring-1 focus:ring-teal-500 outline-none w-full sm:w-48"
+              className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:ring-1 focus:ring-amber-500 outline-none w-full sm:w-48"
             />
 
             {keys.length > 0 && (
@@ -580,7 +590,7 @@ a82f102c91..."
             <thead>
               <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                 <th className="py-3 px-4 w-12 text-center">#</th>
-                <th className="py-3 px-4">ImgBB API Key</th>
+                <th className="py-3 px-4">FreeImg API Key</th>
                 <th className="py-3 px-4">Label / Note</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Added Date</th>
@@ -591,15 +601,15 @@ a82f102c91..."
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-400">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-teal-400" />
-                    <span>Loading ImgBB Vault...</span>
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-400" />
+                    <span>Loading FreeImage Host Vault...</span>
                   </td>
                 </tr>
               ) : filteredKeys.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate-400">
                     <Image className="w-8 h-8 mx-auto mb-2 text-slate-600 opacity-60" />
-                    <p className="font-semibold text-slate-300">No ImgBB API Keys Stored</p>
+                    <p className="font-semibold text-slate-300">No FreeImage Host API Keys Stored</p>
                     <p className="text-[11px] text-slate-500 mt-1">Submit new keys above to populate the vault.</p>
                   </td>
                 </tr>
@@ -609,7 +619,7 @@ a82f102c91..."
                     <td className="py-3 px-4 font-mono text-slate-500 text-center font-bold">
                       {idx + 1}
                     </td>
-                    <td className="py-3 px-4 font-mono font-semibold text-teal-300 select-all">
+                    <td className="py-3 px-4 font-mono font-semibold text-amber-300 select-all">
                       {item.api_key}
                     </td>
                     <td className="py-3 px-4 text-slate-300">
@@ -636,7 +646,7 @@ a82f102c91..."
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => setQrKeyModal(item)}
-                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-teal-400 hover:text-teal-300 transition-all"
+                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-all"
                           title="Scan Key QR Code"
                         >
                           <QrCode className="w-3.5 h-3.5" />
@@ -671,8 +681,8 @@ a82f102c91..."
 
       {qrKeyModal && (
         <QRCodeModal
-          title="ImgBB API Key QR Code"
-          subtitle={`Scan API Key (${qrKeyModal.note || 'ImgBB Key'})`}
+          title="FreeImg API Key QR Code"
+          subtitle={`Scan API Key (${qrKeyModal.note || 'FreeImg Key'})`}
           value={qrKeyModal.api_key}
           onClose={() => setQrKeyModal(null)}
         />

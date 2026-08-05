@@ -1,13 +1,39 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Sparkles, Users, Shield, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Eye, EyeOff, Lock, Sparkles, Users, Shield, ArrowRight, Fingerprint, ShieldCheck, RefreshCw, Settings, KeyRound, Clock } from 'lucide-react';
 import { logActivity } from '../lib/logger';
+import { 
+  authenticateWithBiometrics, 
+  getStoredBiometricInfo, 
+  isWebAuthnSupported,
+  BiometricCredentialInfo 
+} from '../lib/webauthn';
+import BiometricSettingsModal from '../components/BiometricSettingsModal';
 
 export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [idleNotice, setIdleNotice] = useState(false);
+  const [bioLoading, setBioLoading] = useState(false);
+  const [biometricInfo, setBiometricInfo] = useState<BiometricCredentialInfo | null>(null);
+  const [showBioModal, setShowBioModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const webAuthnAvailable = isWebAuthnSupported();
+
+  useEffect(() => {
+    refreshBiometricState();
+    if (location.state?.idleExpired) {
+      setIdleNotice(true);
+    }
+  }, [location.state]);
+
+  const refreshBiometricState = () => {
+    const info = getStoredBiometricInfo();
+    setBiometricInfo(info);
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +46,27 @@ export default function Login() {
       navigate('/');
     } else {
       setError('Incorrect secure vault password');
+    }
+  };
+
+  const handleBiometricUnlock = async () => {
+    setBioLoading(true);
+    setError('');
+
+    try {
+      const authenticated = await authenticateWithBiometrics();
+      if (authenticated) {
+        localStorage.setItem('akti_auth', 'true');
+        logActivity('LOGIN', 'WEBAUTHN', 'Biometric Master Vault Unlocked', `User authenticated via ${biometricInfo?.deviceName || 'Passkey'}`);
+        navigate('/');
+      } else {
+        setError('Biometric verification returned false.');
+      }
+    } catch (err: any) {
+      console.error('Biometric authentication error:', err);
+      setError(err.message || 'Biometric authentication failed or cancelled.');
+    } finally {
+      setBioLoading(false);
     }
   };
 
@@ -42,13 +89,77 @@ export default function Login() {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0 space-y-4">
+        
+        {/* Idle Timeout Warning Notice */}
+        {idleNotice && (
+          <div className="bg-amber-950/40 border border-amber-500/40 p-4 rounded-2xl text-amber-300 text-xs flex items-start gap-3 backdrop-blur-md shadow-lg animate-fade-in">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm text-amber-200">Session Expired (30m Inactivity)</p>
+              <p className="mt-0.5 opacity-90 leading-relaxed text-[11px]">
+                You were automatically signed out for security after 30 minutes of idle inactivity. Please unlock your vault again to resume.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Biometric Quick Unlock Card (If registered & enabled) */}
+        {biometricInfo && biometricInfo.enabled && (
+          <div className="bg-gradient-to-br from-teal-950/40 via-slate-900/90 to-indigo-950/40 backdrop-blur-xl p-5 shadow-2xl rounded-2xl border border-teal-500/30 flex flex-col items-center text-center space-y-3 relative overflow-hidden group">
+            <div className="absolute top-3 right-3">
+              <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[9px] font-bold uppercase tracking-wider">
+                Passkey Ready
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/30 shadow-inner group-hover:scale-110 transition-transform">
+              <Fingerprint className="w-8 h-8 animate-pulse" />
+            </div>
+
+            <div>
+              <h3 className="text-sm font-extrabold text-white">Biometric Quick Unlock</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Scan {biometricInfo.deviceName} to unlock master vault instantly
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleBiometricUnlock}
+              disabled={bioLoading}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            >
+              {bioLoading ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Fingerprint className="w-4 h-4" />
+              )}
+              <span>{bioLoading ? 'Verifying Biometrics...' : 'Unlock with Fingerprint / Face ID'}</span>
+            </button>
+          </div>
+        )}
+
         <div className="bg-slate-900/80 backdrop-blur-xl py-8 px-6 shadow-2xl rounded-2xl sm:px-10 border border-slate-800/80 glow-indigo">
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
-              <label htmlFor="password" className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Master Vault Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Master Vault Password
+                </label>
+                {webAuthnAvailable && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBioModal(true)}
+                    className="text-[11px] font-bold text-teal-400 hover:text-teal-300 hover:underline flex items-center gap-1"
+                  >
+                    <Fingerprint className="w-3.5 h-3.5" />
+                    <span>{biometricInfo ? 'Biometric Settings' : 'Setup Passkey'}</span>
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <Lock className="h-4 w-4 text-indigo-400" />
@@ -103,8 +214,33 @@ export default function Login() {
               </Link>
             </div>
           </form>
+
+          {/* Biometric Security Footer Badge */}
+          <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5 text-teal-400">
+              <ShieldCheck className="w-4 h-4" />
+              <span className="font-semibold">WebAuthn Biometric Security</span>
+            </div>
+            <button
+              onClick={() => setShowBioModal(true)}
+              className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-slate-800"
+              title="Biometric & Passkey Configuration"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {showBioModal && (
+        <BiometricSettingsModal
+          onClose={() => {
+            setShowBioModal(false);
+            refreshBiometricState();
+          }}
+          onStatusChange={refreshBiometricState}
+        />
+      )}
     </div>
   );
 }

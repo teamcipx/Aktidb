@@ -253,12 +253,26 @@ CREATE TABLE IF NOT EXISTS imgbb_api_keys (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   api_key TEXT NOT NULL,
   note TEXT,
+  status TEXT DEFAULT 'Uncompleted',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 ALTER TABLE imgbb_api_keys ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read/write for anon" ON imgbb_api_keys;
 CREATE POLICY "Enable read/write for anon" ON imgbb_api_keys FOR ALL USING (true);
+
+-- FreeImage.host API Keys Table
+CREATE TABLE IF NOT EXISTS freeimg_api_keys (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  api_key TEXT NOT NULL,
+  note TEXT,
+  status TEXT DEFAULT 'Uncompleted',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE freeimg_api_keys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON freeimg_api_keys;
+CREATE POLICY "Enable read/write for anon" ON freeimg_api_keys FOR ALL USING (true);
 
 -- Activity Logs Table
 CREATE TABLE IF NOT EXISTS activity_logs (
