@@ -4,21 +4,36 @@ import { logActivity } from '../lib/logger';
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes warning before timeout
+const STORAGE_KEY = 'zxhub_last_activity_time';
 
 export function useIdleTimeout() {
   const navigate = useNavigate();
-  const [lastActive, setLastActive] = useState<number>(Date.now());
   const [showWarning, setShowWarning] = useState<boolean>(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(1800);
-  const intervalRef = useRef<any>(null);
+  const lastUpdateRef = useRef<number>(Date.now());
+
+  const getStoredLastActivity = (): number => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const val = parseInt(stored, 10);
+      if (!isNaN(val)) return val;
+    }
+    const now = Date.now();
+    localStorage.setItem(STORAGE_KEY, now.toString());
+    return now;
+  };
 
   const resetTimer = useCallback(() => {
-    setLastActive(Date.now());
+    const now = Date.now();
+    localStorage.setItem(STORAGE_KEY, now.toString());
+    lastUpdateRef.current = now;
     setShowWarning(false);
+    setSecondsRemaining(Math.floor(IDLE_TIMEOUT_MS / 1000));
   }, []);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('akti_auth');
+    localStorage.removeItem(STORAGE_KEY);
     logActivity('LOGIN', 'SECURITY', 'Auto Logout (Idle Timeout)', 'Session ended automatically after 30 minutes of inactivity');
     navigate('/login', { state: { idleExpired: true }, replace: true });
   }, [navigate]);
@@ -27,52 +42,70 @@ export function useIdleTimeout() {
     const isAuthenticated = localStorage.getItem('akti_auth') === 'true';
     if (!isAuthenticated) return;
 
-    const activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+    // Ensure initial timestamp exists
+    let lastActive = getStoredLastActivity();
 
-    const handleUserActivity = () => {
-      // Only update if not currently showing warning or if activity was genuine
+    const checkTimeout = () => {
       const now = Date.now();
-      setLastActive((prev) => {
-        // Debounce state updates: update at most once every 3 seconds unless warning was active
-        if (now - prev > 3000 || showWarning) {
-          setShowWarning(false);
-          return now;
-        }
-        return prev;
-      });
+      const currentLastActive = getStoredLastActivity();
+      const elapsed = now - currentLastActive;
+      const remainingMs = IDLE_TIMEOUT_MS - elapsed;
+      const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
+
+      setSecondsRemaining(remainingSec);
+
+      if (remainingMs <= 0) {
+        handleLogout();
+        return;
+      }
+
+      if (remainingMs <= WARNING_THRESHOLD_MS) {
+        setShowWarning(true);
+      } else {
+        setShowWarning(false);
+      }
     };
 
+    // User activity listener (debounced to once every 5 seconds)
+    const handleUserActivity = () => {
+      const now = Date.now();
+      if (now - lastUpdateRef.current > 5000) {
+        lastUpdateRef.current = now;
+        localStorage.setItem(STORAGE_KEY, now.toString());
+        setShowWarning(false);
+      }
+    };
+
+    const activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
     activityEvents.forEach((evt) => {
       window.addEventListener(evt, handleUserActivity, { passive: true });
     });
 
-    intervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - lastActive;
-      const remainingMs = IDLE_TIMEOUT_MS - elapsed;
-      const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
-      setSecondsRemaining(remainingSec);
+    // Check timeout every 1 second
+    const timerInterval = setInterval(checkTimeout, 1000);
 
-      if (remainingMs <= WARNING_THRESHOLD_MS && remainingMs > 0) {
-        setShowWarning(true);
-      } else if (remainingMs > WARNING_THRESHOLD_MS) {
-        setShowWarning(false);
+    // Also check immediately when page becomes visible or focused
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkTimeout();
       }
+    };
 
-      if (remainingMs <= 0) {
-        clearInterval(intervalRef.current);
-        handleLogout();
-      }
-    }, 1000);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkTimeout);
+
+    // Initial check on mount
+    checkTimeout();
 
     return () => {
       activityEvents.forEach((evt) => {
         window.removeEventListener(evt, handleUserActivity);
       });
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkTimeout);
+      clearInterval(timerInterval);
     };
-  }, [lastActive, showWarning, handleLogout]);
+  }, [handleLogout]);
 
   return {
     secondsRemaining,
@@ -81,3 +114,4 @@ export function useIdleTimeout() {
     idleTimeoutMinutes: 30
   };
 }
+

@@ -18,6 +18,8 @@ export default function Login() {
   const [bioLoading, setBioLoading] = useState(false);
   const [biometricInfo, setBiometricInfo] = useState<BiometricCredentialInfo | null>(null);
   const [showBioModal, setShowBioModal] = useState(false);
+  const [autoPrompted, setAutoPrompted] = useState(false);
+  const autoPromptRef = React.useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,6 +31,18 @@ export default function Login() {
       setIdleNotice(true);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    // Auto-prompt passkey scan if enabled and not auto-prompted yet
+    if (biometricInfo && biometricInfo.enabled && !autoPromptRef.current) {
+      autoPromptRef.current = true;
+      setAutoPrompted(true);
+      const timer = setTimeout(() => {
+        handleBiometricUnlock();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [biometricInfo]);
 
   const refreshBiometricState = () => {
     const info = getStoredBiometricInfo();
@@ -42,6 +56,7 @@ export default function Login() {
     
     if (password === masterPassword) {
       localStorage.setItem('akti_auth', 'true');
+      localStorage.setItem('zxhub_last_activity_time', Date.now().toString());
       logActivity('LOGIN', 'AUTH', 'Master Vault Unlocked', 'User authenticated with master password');
       navigate('/');
     } else {
@@ -57,6 +72,7 @@ export default function Login() {
       const authenticated = await authenticateWithBiometrics();
       if (authenticated) {
         localStorage.setItem('akti_auth', 'true');
+        localStorage.setItem('zxhub_last_activity_time', Date.now().toString());
         logActivity('LOGIN', 'WEBAUTHN', 'Biometric Master Vault Unlocked', `User authenticated via ${biometricInfo?.deviceName || 'Passkey'}`);
         navigate('/');
       } else {
@@ -64,7 +80,10 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error('Biometric authentication error:', err);
-      setError(err.message || 'Biometric authentication failed or cancelled.');
+      // Don't show error banner if user merely dismissed auto-prompt quietly
+      if (err.name !== 'NotAllowedError' && !err.message?.includes('cancelled')) {
+        setError(err.message || 'Biometric authentication failed or cancelled.');
+      }
     } finally {
       setBioLoading(false);
     }

@@ -43,6 +43,7 @@ export default function Layout() {
 
   const handleLogout = () => {
     localStorage.removeItem('akti_auth');
+    localStorage.removeItem('zxhub_last_activity_time');
     navigate('/login');
   };
 
