@@ -23,6 +23,7 @@ import FreeimgManager from './pages/FreeimgManager';
 import PublicWorkspace from './pages/PublicWorkspace';
 import Todo from './pages/Todo';
 import AddProject from './pages/AddProject';
+import AddDataVault from './pages/AddDataVault';
 import ActivityLogs from './pages/ActivityLogs';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -61,6 +62,8 @@ export default function App() {
           <Route path="freeimg" element={<FreeimgManager />} />
           <Route path="add-contact" element={<AddContact />} />
           <Route path="add-project" element={<AddProject />} />
+          <Route path="data-vault" element={<AddDataVault />} />
+          <Route path="add-data-vault" element={<AddDataVault />} />
           <Route path="logs" element={<ActivityLogs />} />
         </Route>
       </Routes>

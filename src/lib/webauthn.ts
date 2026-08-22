@@ -63,6 +63,15 @@ export function clearBiometricCredential(): void {
   localStorage.removeItem('zxhub_biometric_device_name');
 }
 
+export function validateMasterPassword(password: string): boolean {
+  const masterPassword = import.meta.env.VITE_MASTER_PASSWORD || 'aktiadmin';
+  return password.trim() === masterPassword.trim();
+}
+
+export function isMasterAuthenticated(): boolean {
+  return typeof localStorage !== 'undefined' && localStorage.getItem('akti_auth') === 'true';
+}
+
 export function toggleBiometricEnabled(enable: boolean): void {
   localStorage.setItem('zxhub_biometric_enabled', enable ? 'true' : 'false');
 }

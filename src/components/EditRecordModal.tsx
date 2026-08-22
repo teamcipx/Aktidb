@@ -29,11 +29,16 @@ export default function EditRecordModal({ account, type, onClose, onSave }: any)
       if (type === 'contact') table = 'contact_numbers';
       if (type === 'brevo') table = 'brevo_accounts';
       if (type === 'vercel') table = 'vercel_accounts';
-      if (type === 'project') table = 'projects';
+      if (type === 'project' || type === 'projects') table = 'projects';
+      if (type === 'data_vault') table = 'data_vault';
+      if (type === 'imgbb') table = 'imgbb_api_keys';
+      if (type === 'freeimg') table = 'freeimg_api_keys';
 
       // Clean metadata before sending
       const dataToSave = { ...formData };
       delete dataToSave.created_at;
+      delete dataToSave._vault_category;
+      delete dataToSave._type;
 
       const { error: dbError } = await supabase.from(table).update(dataToSave).eq('id', account.id);
       

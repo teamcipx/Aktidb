@@ -1,9 +1,41 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search as SearchIcon, Filter, Layers, Download, Eye, EyeOff, FileText, Image as ImageIcon, View, Trash2, Edit2, Check, Clock, CheckCircle2, QrCode } from 'lucide-react';
+import { 
+  Search as SearchIcon, 
+  Filter, 
+  Layers, 
+  Download, 
+  Eye, 
+  EyeOff, 
+  FileText, 
+  Image as ImageIcon, 
+  Trash2, 
+  Edit2, 
+  Check, 
+  Clock, 
+  CheckCircle2, 
+  QrCode, 
+  ExternalLink, 
+  Copy, 
+  Bookmark, 
+  FolderKanban, 
+  Database, 
+  Github, 
+  Facebook, 
+  Mail, 
+  ShieldAlert, 
+  Phone, 
+  Send, 
+  Triangle, 
+  Image, 
+  RefreshCw, 
+  Grid, 
+  List, 
+  Sparkles,
+  Command
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
-import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import AccountDetailsModal from '../components/AccountDetailsModal';
@@ -12,729 +44,845 @@ import PdfExportModal from '../components/PdfExportModal';
 import QRCodeModal from '../components/QRCodeModal';
 import { logActivity } from '../lib/logger';
 
+type VaultCategory = 
+  | 'all' 
+  | 'data_vault' 
+  | 'projects' 
+  | 'imgbb' 
+  | 'freeimg' 
+  | 'fb' 
+  | 'gmail' 
+  | 'special_fb' 
+  | 'special_gmail' 
+  | 'supabase' 
+  | 'github' 
+  | 'brevo' 
+  | 'vercel' 
+  | 'contact';
+
+interface CategoryConfig {
+  id: VaultCategory;
+  label: string;
+  table: string;
+  icon: any;
+  color: string;
+  badgeColor: string;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  { id: 'all', label: 'Universal (All Vaults)', table: '', icon: Sparkles, color: 'text-indigo-400', badgeColor: 'bg-indigo-500/20 text-indigo-300' },
+  { id: 'data_vault', label: 'Data Vault', table: 'data_vault', icon: Bookmark, color: 'text-cyan-400', badgeColor: 'bg-cyan-500/20 text-cyan-300' },
+  { id: 'projects', label: 'Projects', table: 'projects', icon: FolderKanban, color: 'text-indigo-400', badgeColor: 'bg-indigo-500/20 text-indigo-300' },
+  { id: 'imgbb', label: 'ImgBB API', table: 'imgbb_api_keys', icon: Image, color: 'text-teal-400', badgeColor: 'bg-teal-500/20 text-teal-300' },
+  { id: 'freeimg', label: 'FreeImg Host', table: 'freeimg_api_keys', icon: Image, color: 'text-amber-400', badgeColor: 'bg-amber-500/20 text-amber-300' },
+  { id: 'supabase', label: 'Supabase DB', table: 'supabase_accounts', icon: Database, color: 'text-emerald-400', badgeColor: 'bg-emerald-500/20 text-emerald-300' },
+  { id: 'github', label: 'GitHub', table: 'github_accounts', icon: Github, color: 'text-slate-300', badgeColor: 'bg-slate-500/20 text-slate-300' },
+  { id: 'vercel', label: 'Vercel', table: 'vercel_accounts', icon: Triangle, color: 'text-purple-400', badgeColor: 'bg-purple-500/20 text-purple-300' },
+  { id: 'brevo', label: 'Brevo SMTP', table: 'brevo_accounts', icon: Send, color: 'text-teal-400', badgeColor: 'bg-teal-500/20 text-teal-300' },
+  { id: 'fb', label: 'Facebook', table: 'fb_accounts', icon: Facebook, color: 'text-blue-400', badgeColor: 'bg-blue-500/20 text-blue-300' },
+  { id: 'special_fb', label: 'Special FB', table: 'special_fb_accounts', icon: ShieldAlert, color: 'text-rose-400', badgeColor: 'bg-rose-500/20 text-rose-300' },
+  { id: 'gmail', label: 'Gmail', table: 'gmail_accounts', icon: Mail, color: 'text-red-400', badgeColor: 'bg-red-500/20 text-red-300' },
+  { id: 'special_gmail', label: 'Special Gmail', table: 'special_gmail_accounts', icon: ShieldAlert, color: 'text-rose-400', badgeColor: 'bg-rose-500/20 text-rose-300' },
+  { id: 'contact', label: 'Contacts', table: 'contact_numbers', icon: Phone, color: 'text-amber-400', badgeColor: 'bg-amber-500/20 text-amber-300' },
+];
+
 export default function Search() {
-  const [activeTab, setActiveTab] = useState<'fb'|'gmail'|'special_fb'|'special_gmail'|'supabase'|'github'|'contact'|'brevo'|'vercel'|'imgbb'|'freeimg'|'project'>('fb');
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<VaultCategory>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'Complete' | 'Uncompleted'>('ALL');
+  const [viewLayout, setViewLayout] = useState<'grid' | 'table'>('grid');
+  
+  // Data cache
+  const [vaultData, setVaultData] = useState<Record<string, any[]>>({});
+  const [loading, setLoading] = useState(true);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Modals
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [qrModalItem, setQrModalItem] = useState<any | null>(null);
-  
-  // Basic filtering
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedPurpose, setSelectedPurpose] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-
-  const handleToggleStatus = async (item: any) => {
-    const newStatus = (item.status === 'Complete') ? 'Uncompleted' : 'Complete';
-    let table = 'fb_accounts';
-    if (activeTab === 'gmail') table = 'gmail_accounts';
-    if (activeTab === 'supabase') table = 'supabase_accounts';
-    if (activeTab === 'github') table = 'github_accounts';
-    if (activeTab === 'special_fb') table = 'special_fb_accounts';
-    if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
-    if (activeTab === 'contact') table = 'contact_numbers';
-    if (activeTab === 'brevo') table = 'brevo_accounts';
-    if (activeTab === 'vercel') table = 'vercel_accounts';
-    if (activeTab === 'imgbb') table = 'imgbb_api_keys';
-    if (activeTab === 'freeimg') table = 'freeimg_api_keys';
-    if (activeTab === 'project') table = 'projects';
-
-    const { error } = await supabase.from(table).update({ status: newStatus }).eq('id', item.id);
-    if (!error) {
-      logActivity('STATUS_CHANGE', activeTab.toUpperCase(), `Changed status to "${newStatus}" for ${item.name || item.email || item.id}`, `Table: ${table}`);
-      setData(data.map(d => d.id === item.id ? { ...d, status: newStatus } : d));
-    } else {
-      console.warn('Could not update status in DB, updating local view:', error.message);
-      logActivity('STATUS_CHANGE', activeTab.toUpperCase(), `Changed status to "${newStatus}" for ${item.name || item.email || item.id}`, `Table: ${table}`);
-      setData(data.map(d => d.id === item.id ? { ...d, status: newStatus } : d));
-    }
-  };
-  
-  // Available filter options based on data
-  const [countries, setCountries] = useState<string[]>([]);
-  const [purposes, setPurposes] = useState<string[]>([]);
-  
-  // Modal state
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [editingAccount, setEditingAccount] = useState<any>(null);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut Ctrl+K or '/'
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) && document.activeElement !== searchInputRef.current) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Fetch all data from Supabase / localStorage fallback
+  const fetchAllVaults = async () => {
+    setLoading(true);
+    const tables = CATEGORIES.filter(c => c.id !== 'all').map(c => ({ id: c.id, table: c.table }));
+    const result: Record<string, any[]> = {};
+
+    await Promise.all(
+      tables.map(async ({ id, table }) => {
+        try {
+          const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+          if (!error && data) {
+            result[id] = data;
+            localStorage.setItem(`zxhub_cache_${id}`, JSON.stringify(data));
+          } else {
+            const cached = localStorage.getItem(`zxhub_cache_${id}`) || localStorage.getItem(`zxhub_${id}_cache`);
+            result[id] = cached ? JSON.parse(cached) : [];
+          }
+        } catch (err) {
+          const cached = localStorage.getItem(`zxhub_cache_${id}`) || localStorage.getItem(`zxhub_${id}_cache`);
+          result[id] = cached ? JSON.parse(cached) : [];
+        }
+      })
+    );
+
+    setVaultData(result);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAllVaults();
+  }, []);
+
+  const handleToggleStatus = async (item: any, category: string) => {
+    const newStatus = item.status === 'Complete' ? 'Uncompleted' : 'Complete';
+    const config = CATEGORIES.find(c => c.id === category);
+    if (!config || !config.table) return;
+
+    try {
+      if (item.id && !String(item.id).startsWith('local-')) {
+        await supabase.from(config.table).update({ status: newStatus }).eq('id', item.id);
+      }
+      
+      const currentList = vaultData[category] || [];
+      const updatedList = currentList.map(d => d.id === item.id ? { ...d, status: newStatus } : d);
+      
+      setVaultData(prev => ({ ...prev, [category]: updatedList }));
+      localStorage.setItem(`zxhub_cache_${category}`, JSON.stringify(updatedList));
+      
+      logActivity(
+        'STATUS_CHANGE', 
+        category.toUpperCase(), 
+        `Changed status to "${newStatus}" for ${item.name || item.email || item.title || item.id}`, 
+        `Table: ${config.table}`
+      );
+    } catch (err: any) {
+      console.warn('Status toggle error:', err);
+    }
+  };
+
+  const handleDeleteItem = async (item: any, category: string) => {
+    const name = item.name || item.email || item.title || item.api_key || item.id;
+    if (!confirm(`Are you sure you want to delete "${name}" from ${category}?`)) return;
+
+    const config = CATEGORIES.find(c => c.id === category);
+    if (!config || !config.table) return;
+
+    try {
+      if (item.id && !String(item.id).startsWith('local-')) {
+        await supabase.from(config.table).delete().eq('id', item.id);
+      }
+
+      const currentList = vaultData[category] || [];
+      const updatedList = currentList.filter(d => d.id !== item.id);
+      
+      setVaultData(prev => ({ ...prev, [category]: updatedList }));
+      localStorage.setItem(`zxhub_cache_${category}`, JSON.stringify(updatedList));
+
+      logActivity('DELETE', category.toUpperCase(), `Deleted record "${name}"`, `Table: ${config.table}`);
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
+  const handleCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const togglePassword = (id: string) => {
+    setRevealedPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Search filtering logic
+  const searchLower = searchTerm.toLowerCase().trim();
+
+  const filterItem = (item: any) => {
+    if (selectedStatus !== 'ALL') {
+      if (selectedStatus === 'Complete' && item.status !== 'Complete') return false;
+      if (selectedStatus === 'Uncompleted' && item.status === 'Complete') return false;
+    }
+
+    if (!searchLower) return true;
+
+    // Search across all string attributes
+    return Object.values(item).some(val => {
+      if (val === null || val === undefined) return false;
+      if (typeof val === 'string' || typeof val === 'number') {
+        return String(val).toLowerCase().includes(searchLower);
+      }
+      return false;
+    });
+  };
+
+  // Compile list based on active tab
+  let visibleItems: { item: any; category: VaultCategory }[] = [];
+
+  if (activeTab === 'all') {
+    Object.entries(vaultData).forEach(([cat, list]: [string, any[]]) => {
+      if (Array.isArray(list)) {
+        list.forEach(item => {
+          if (filterItem(item)) {
+            visibleItems.push({ item, category: cat as VaultCategory });
+          }
+        });
+      }
+    });
+  } else {
+    const list = vaultData[activeTab] || [];
+    if (Array.isArray(list)) {
+      list.forEach(item => {
+        if (filterItem(item)) {
+          visibleItems.push({ item, category: activeTab });
+        }
+      });
+    }
+  }
+
+  // Highlight matching text helper
+  const highlightMatch = (text: string | undefined | null) => {
+    if (!text) return '';
+    if (!searchLower) return text;
+    const str = String(text);
+    const index = str.toLowerCase().indexOf(searchLower);
+    if (index === -1) return str;
+
+    return (
+      <>
+        {str.substring(0, index)}
+        <mark className="bg-amber-400/30 text-amber-200 px-0.5 rounded font-bold">
+          {str.substring(index, index + searchLower.length)}
+        </mark>
+        {str.substring(index + searchLower.length)}
+      </>
+    );
+  };
+
+  // Export filtered items to CSV
   const handleExportCSV = () => {
-    if (filteredData.length === 0) return;
+    if (visibleItems.length === 0) return;
     
-    const keys = Object.keys(filteredData[0]).filter(key => key !== 'id');
-    const csvRows = [
-      keys.join(','), 
-      ...filteredData.map(row => 
-        keys.map(k => {
-          let val = row[k] === null || row[k] === undefined ? '' : row[k];
-          val = String(val).replace(/"/g, '""');
-          return `"${val}"`;
-        }).join(',')
-      )
-    ];
-    
-    const csvContent = csvRows.join('\n');
+    const rows = visibleItems.map(({ item, category }) => {
+      const copy = { ...item, _vault_category: category };
+      delete copy.id;
+      return copy;
+    });
+
+    const headers = Object.keys(rows[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => headers.map(h => `"${String(r[h] || '').replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `zxhub_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.download = `zxhub_${activeTab}_export_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleExportPDF = () => {
-    if (filteredData.length === 0) return;
-    setIsPdfModalOpen(true);
-  };
-
   const performExportPDF = (includePassword: boolean) => {
-    if (filteredData.length === 0) return;
+    if (visibleItems.length === 0) return;
     const doc = new jsPDF('l', 'mm', 'a4');
     
     // Header Banner
     doc.setFillColor(15, 23, 42); // slate-900
     doc.rect(0, 0, 297, 38, 'F');
-    
-    // Accent Line
-    doc.setFillColor(79, 70, 229); // indigo-600
-    doc.rect(0, 36, 297, 2, 'F');
-    
+
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(`AKTI DB - ${activeTab.replace(/_/g, ' ').toUpperCase()} VAULT REPORT`, 14, 16);
-    
+    doc.text('ZX HUB — GLOBAL AUDIT VAULT EXPORT', 14, 18);
+
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(203, 213, 225);
-    doc.text(`Category Export | Total Records: ${filteredData.length} | Mode: ${includePassword ? 'WITH PASSWORDS' : 'WITHOUT PASSWORDS'}`, 14, 25);
     doc.setTextColor(148, 163, 184);
-    doc.text(`Generated: ${format(new Date(), 'PPpp')} | Filters: ${selectedCountry || 'All Regions'} / ${selectedPurpose || 'All Purposes'} | Issue by : Ali Hosen`, 14, 32);
-    
-    // Filter out internal id, user_id and conditionally password fields
-    const keys = Object.keys(filteredData[0]).filter(key => {
-      if (key === 'id' || key === 'user_id') return false;
-      if (!includePassword && (key === 'password' || key === 'master_password' || key === 'db_pass' || key === 'two_fa_code' || key === 'smtp_key')) {
-        return false;
-      }
-      return true;
-    });
+    doc.text(`Category: ${activeTab.toUpperCase()} | Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')} | Total Records: ${visibleItems.length}`, 14, 28);
 
-    const head = [keys.map(k => k.replace(/_/g, ' ').toUpperCase())];
-    const dataRows = filteredData.map(row => keys.map(k => {
-      let val = row[k];
-      if (val === null || val === undefined) return '-';
-      if (k === 'created_at') return format(new Date(val), 'yyyy-MM-dd');
-      return String(val);
-    }));
-    
+    const headers = ['Category', 'Name / Identifier', 'Email / Username', 'Secret / Key', 'Link / URL', 'Status'];
+    const rows = visibleItems.map(({ item, category }) => [
+      category.toUpperCase(),
+      item.name || item.title || item.first_channel_name || 'N/A',
+      item.email || item.username || item.phone || item.admin_email || 'N/A',
+      includePassword ? (item.password || item.admin_password || item.api_key || item.token || 'N/A') : '••••••••',
+      item.link || item.url || item.profile_link || 'N/A',
+      item.status || 'Uncompleted'
+    ]);
+
     autoTable(doc, {
-      head: head,
-      body: dataRows,
+      head: [headers],
+      body: rows,
       startY: 44,
-      theme: 'grid',
-      styles: { fontSize: 8.5, cellPadding: 3, textColor: [30, 41, 59], overflow: 'linebreak' },
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3, textColor: [30, 41, 59] },
+      headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 14, right: 14 },
-      didDrawPage: (data) => {
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`Akti DB Command Center - Vault Category Report  |  Issue by : Ali Hosen`, 14, 202);
-        doc.text(`Page ${data.pageNumber}`, 270, 202);
-      }
     });
-    
-    const modeTag = includePassword ? 'with_pass' : 'no_pass';
-    doc.save(`zxhub_export_${activeTab}_${modeTag}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+
+    doc.save(`zxhub_vault_${activeTab}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
+    setIsPdfModalOpen(false);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    let table = 'fb_accounts';
-    if (activeTab === 'gmail') table = 'gmail_accounts';
-    if (activeTab === 'supabase') table = 'supabase_accounts';
-    if (activeTab === 'github') table = 'github_accounts';
-    if (activeTab === 'special_fb') table = 'special_fb_accounts';
-    if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
-    if (activeTab === 'contact') table = 'contact_numbers';
-    if (activeTab === 'brevo') table = 'brevo_accounts';
-    if (activeTab === 'vercel') table = 'vercel_accounts';
-    if (activeTab === 'imgbb') table = 'imgbb_api_keys';
-    if (activeTab === 'freeimg') table = 'freeimg_api_keys';
-    if (activeTab === 'project') table = 'projects';
-    
-    const { data: records, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error(error);
-    } else if (records) {
-      setData(records);
-      
-      // Extract unique countries and purposes for filter dropdowns
-      const uCountries = Array.from(new Set(records.map(r => r.country || r.group_name).filter(Boolean)));
-      const uPurposes = Array.from(new Set(records.map(r => r.purpose).filter(Boolean)));
-      setCountries(uCountries as string[]);
-      setPurposes(uPurposes as string[]);
+  // Compute counts for tabs
+  const getCategoryCount = (catId: VaultCategory) => {
+    if (catId === 'all') {
+      return (Object.values(vaultData) as any[][]).reduce((acc: number, curr: any[]) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
     }
-    setLoading(false);
+    return vaultData[catId]?.length || 0;
   };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this entry? This action cannot be undone.')) return;
-    
-    let table = 'fb_accounts';
-    if (activeTab === 'gmail') table = 'gmail_accounts';
-    if (activeTab === 'supabase') table = 'supabase_accounts';
-    if (activeTab === 'github') table = 'github_accounts';
-    if (activeTab === 'special_fb') table = 'special_fb_accounts';
-    if (activeTab === 'special_gmail') table = 'special_gmail_accounts';
-    if (activeTab === 'contact') table = 'contact_numbers';
-    if (activeTab === 'brevo') table = 'brevo_accounts';
-    if (activeTab === 'vercel') table = 'vercel_accounts';
-    if (activeTab === 'imgbb') table = 'imgbb_api_keys';
-    if (activeTab === 'freeimg') table = 'freeimg_api_keys';
-    if (activeTab === 'project') table = 'projects';
-
-    const { error } = await supabase.from(table).delete().eq('id', id);
-    if (error) {
-      alert('Error deleting entry: ' + error.message);
-    } else {
-      logActivity('DELETE', activeTab.toUpperCase(), `Deleted ${activeTab.replace('_', ' ')} record`, `Removed entry ID ${id} from table ${table}`);
-      setData(data.filter(item => item.id !== id));
-    }
-  };
-
-  const filteredData = data.filter(item => {
-    const matchesSearch = 
-      (item.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (item.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (item.organization?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (item.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-      
-    const itemCountry = item.country || item.group_name;
-    const matchesCountry = selectedCountry ? itemCountry === selectedCountry : true;
-    const matchesPurpose = selectedPurpose ? item.purpose === selectedPurpose : true;
-    const itemStatus = item.status || 'Uncompleted';
-    const matchesStatus = selectedStatus ? itemStatus === selectedStatus : true;
-    
-    return matchesSearch && matchesCountry && matchesPurpose && matchesStatus;
-  });
 
   return (
-    <div className="space-y-6 flex flex-col h-full font-sans text-slate-100">
-      <div className="flex justify-between items-center bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-4 -mx-4 md:-mx-8 -mt-4 md:-mt-8 mb-4 shrink-0 relative">
-        <div className="flex items-center space-x-2 text-indigo-400">
-          <SearchIcon className="w-5 h-5 font-bold" />
-          <h1 className="text-xs font-bold uppercase tracking-wider text-slate-100">Search Database</h1>
-        </div>
-        <div className="flex items-center space-x-2 absolute md:static right-4 top-3">
-          <button 
-            onClick={handleExportCSV}
-            title="Export full table to CSV"
-            className="flex items-center justify-center p-2 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition-colors"
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={handleExportPDF}
-            title="Export full table to PDF"
-            className="flex items-center justify-center p-2 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={async () => {
-              const el = document.getElementById('search-table-container');
-              if (!el) return;
-              const url = await toPng(el, { pixelRatio: 2, backgroundColor: '#0f172a' }); // dark slate bg
-              const link = document.createElement('a');
-              link.download = `zxhub_export_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.png`;
-              link.href = url;
-              link.click();
-            }}
-            title="Export full table to Image"
-            className="flex items-center justify-center p-2 text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition-colors"
-          >
-            <ImageIcon className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex flex-wrap border-b border-slate-800 shrink-0">
-        <button
-          onClick={() => setActiveTab('fb')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'fb' 
-              ? "border-indigo-500 text-indigo-400 bg-indigo-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Facebook Entry
-        </button>
-        <button
-          onClick={() => setActiveTab('gmail')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'gmail' 
-              ? "border-sky-500 text-sky-400 bg-sky-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Gmail Entry
-        </button>
-        <button
-          onClick={() => setActiveTab('special_fb')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'special_fb' 
-              ? "border-rose-500 text-rose-400 bg-rose-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Spc. FB
-        </button>
-        <button
-          onClick={() => setActiveTab('special_gmail')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'special_gmail' 
-              ? "border-rose-500 text-rose-400 bg-rose-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Spc. Gmail
-        </button>
-        <button
-          onClick={() => setActiveTab('contact')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'contact' 
-              ? "border-amber-500 text-amber-400 bg-amber-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Contacts
-        </button>
-        <button
-          onClick={() => setActiveTab('supabase')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'supabase' 
-              ? "border-emerald-500 text-emerald-400 bg-emerald-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Supabase Entry
-        </button>
-        <button
-          onClick={() => setActiveTab('github')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'github' 
-              ? "border-violet-500 text-violet-400 bg-violet-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Github Entry
-        </button>
-        <button
-          onClick={() => setActiveTab('brevo')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'brevo' 
-              ? "border-teal-500 text-teal-400 bg-teal-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Brevo Entry
-        </button>
-        <button
-          onClick={() => setActiveTab('vercel')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'vercel' 
-              ? "border-purple-500 text-purple-400 bg-purple-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Vercel Entry
-        </button>
-        <button
-          onClick={() => setActiveTab('imgbb')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'imgbb' 
-              ? "border-teal-500 text-teal-300 bg-teal-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          ImgBB Keys
-        </button>
-        <button
-          onClick={() => setActiveTab('freeimg')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'freeimg' 
-              ? "border-cyan-500 text-cyan-300 bg-cyan-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          FreeImg Keys
-        </button>
-        <button
-          onClick={() => setActiveTab('project')}
-          className={cn(
-            "py-3 px-4 text-xs font-bold border-b-2 transition-colors",
-            activeTab === 'project' 
-              ? "border-indigo-500 text-indigo-400 bg-indigo-500/10" 
-              : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-          )}
-        >
-          Projects Hub
-        </button>
-      </div>
-
-      {/* Filters Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-4 shrink-0 mt-4">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="Search name, email, phone, organization..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-sans"
-          />
-          <div className="absolute left-3 top-2.5 text-slate-500">
-             <SearchIcon className="w-4 h-4" />
-          </div>
-        </div>
+    <div className="space-y-5 font-sans">
+      
+      {/* Top Search & Filter Bar */}
+      <div className="bg-slate-900/90 border border-slate-800/90 p-4 sm:p-5 rounded-2xl backdrop-blur-xl shadow-xl space-y-4">
         
-        <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <select
-              value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg outline-none text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">{activeTab === 'contact' ? 'All Groups' : 'All Countries'}</option>
-              {countries.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Layers className="w-4 h-4 text-slate-500" />
-            <select
-              value={selectedPurpose}
-              onChange={(e) => setSelectedPurpose(e.target.value)}
-              className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg outline-none text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Purposes</option>
-              {purposes.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+        {/* Search Input Row with Stats and Actions */}
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <SearchIcon className="w-4 h-4 text-cyan-400" />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Universal Search across all credentials, URLs, APIs, emails, notes... (Press '/' or Ctrl+K)"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-20 py-2.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors shadow-inner"
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center space-x-1">
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="p-1 text-slate-500 hover:text-slate-300 text-xs font-bold"
+                >
+                  Clear
+                </button>
+              )}
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-800 rounded">
+                <Command className="w-2.5 h-2.5" /> K
+              </kbd>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-slate-500" />
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg outline-none text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="Uncompleted">Uncompleted</option>
-              <option value="Complete">Complete</option>
-            </select>
+          {/* Status Filter & View Mode Toggles */}
+          <div className="flex items-center justify-between w-full md:w-auto gap-2">
+            
+            {/* Status Pills */}
+            <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+              {(['ALL', 'Uncompleted', 'Complete'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setSelectedStatus(st)}
+                  className={cn(
+                    "px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all",
+                    selectedStatus === st
+                      ? (st === 'Complete' ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : (st === 'Uncompleted' ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"))
+                      : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  {st === 'ALL' ? 'All Status' : st}
+                </button>
+              ))}
+            </div>
+
+            {/* Layout Toggle (Grid / Table) */}
+            <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+              <button
+                onClick={() => setViewLayout('grid')}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  viewLayout === 'grid' ? "bg-cyan-600/30 text-cyan-300" : "text-slate-400 hover:text-slate-200"
+                )}
+                title="Grid Card View"
+              >
+                <Grid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewLayout('table')}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  viewLayout === 'table' ? "bg-cyan-600/30 text-cyan-300" : "text-slate-400 hover:text-slate-200"
+                )}
+                title="Dense Table View"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Export & Refresh */}
+            <div className="flex items-center space-x-1 shrink-0">
+              <button
+                onClick={handleExportCSV}
+                className="p-2 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-all text-xs font-bold"
+                title="Export Filtered Results to CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-teal-400" />
+              </button>
+              <button
+                onClick={() => setIsPdfModalOpen(true)}
+                className="p-2 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-all text-xs font-bold"
+                title="Export Filtered Results to PDF"
+              >
+                <FileText className="w-3.5 h-3.5 text-rose-400" />
+              </button>
+              <button
+                onClick={fetchAllVaults}
+                className="p-2 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-all text-xs font-bold"
+                title="Refresh All Vaults"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin text-cyan-400")} />
+              </button>
+            </div>
+
           </div>
         </div>
+
+        {/* Category Tab Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs border-t border-slate-800/80 pt-3">
+          {CATEGORIES.map(cat => {
+            const count = getCategoryCount(cat.id);
+            const Icon = cat.icon;
+            const isActive = activeTab === cat.id;
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveTab(cat.id)}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 shrink-0 transition-all duration-150 border",
+                  isActive
+                    ? "bg-gradient-to-r from-cyan-600/30 to-indigo-600/30 border-cyan-500/50 text-white shadow-md"
+                    : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+                )}
+              >
+                <Icon className={cn("w-3.5 h-3.5", cat.color)} />
+                <span>{cat.label}</span>
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold",
+                  isActive ? "bg-cyan-500 text-slate-950" : "bg-slate-800 text-slate-400"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
       </div>
 
-      {/* Data Table */}
-      <div id="search-table-container" className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col min-h-[300px]">
-        <div className="overflow-auto flex-1 scroll-hide">
-          <table className="w-full text-sm text-left text-slate-300">
-            <thead className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-800/50 border-b border-slate-800 sticky top-0 z-10">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Email</th>
-                {activeTab === 'contact' ? (
-                  <>
-                    <th className="px-4 py-3">Phone</th>
-                    <th className="px-4 py-3">Org/Company</th>
-                    <th className="px-4 py-3">Purpose</th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-4 py-3">Password</th>
-                    {activeTab === 'supabase' ? (
-                      <>
-                        <th className="px-4 py-3">Project URL</th>
-                        <th className="px-4 py-3">Purpose</th>
-                      </>
-                    ) : activeTab === 'github' ? (
-                      <>
-                        <th className="px-4 py-3">Username</th>
-                        <th className="px-4 py-3">Profile Link</th>
-                        <th className="px-4 py-3">Purpose</th>
-                      </>
-                    ) : activeTab === 'brevo' ? (
-                      <>
-                        <th className="px-4 py-3">API Key v3</th>
-                        <th className="px-4 py-3">SMTP Key</th>
-                        <th className="px-4 py-3">Purpose</th>
-                      </>
-                    ) : activeTab === 'vercel' ? (
-                      <>
-                        <th className="px-4 py-3">Token</th>
-                        <th className="px-4 py-3">Team ID</th>
-                        <th className="px-4 py-3">Purpose</th>
-                      </>
-                    ) : activeTab === 'project' ? (
-                      <>
-                        <th className="px-4 py-3">Project Link</th>
-                        <th className="px-4 py-3">GitHub / Vercel</th>
-                        <th className="px-4 py-3">Supabase / Brevo</th>
-                        <th className="px-4 py-3">Purpose</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="px-4 py-3">Phone</th>
-                        <th className="px-4 py-3">Country</th>
-                        <th className="px-4 py-3">Purpose</th>
-                      </>
-                    )}
-                  </>
+      {/* Results Header Info */}
+      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+        <span className="flex items-center gap-1.5 font-bold">
+          <Layers className="w-4 h-4 text-cyan-400" />
+          Showing <span className="text-white font-mono">{visibleItems.length}</span> matching records
+          {searchTerm && <span>for "<span className="text-cyan-300">{searchTerm}</span>"</span>}
+        </span>
+        {activeTab !== 'all' && (
+          <button
+            onClick={() => setActiveTab('all')}
+            className="text-cyan-400 hover:underline text-[11px] font-bold"
+          >
+            Switch to Universal (All Vaults)
+          </button>
+        )}
+      </div>
+
+      {/* Main Results Display */}
+      {loading ? (
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-16 text-center text-slate-500 text-xs font-mono animate-pulse">
+          Querying all cloud databases & local caches...
+        </div>
+      ) : visibleItems.length === 0 ? (
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-16 text-center text-slate-400 space-y-3">
+          <div className="p-3.5 bg-slate-800/60 rounded-2xl w-fit mx-auto text-slate-500">
+            <SearchIcon className="w-8 h-8" />
+          </div>
+          <p className="font-extrabold text-base text-white">No Matching Vault Entries</p>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            No entries found matching your search term and active category filters.
+          </p>
+        </div>
+      ) : viewLayout === 'grid' ? (
+        /* Grid Layout */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {visibleItems.map(({ item, category }) => {
+            const isComplete = item.status === 'Complete';
+            const catConfig = CATEGORIES.find(c => c.id === category) || CATEGORIES[1];
+            const Icon = catConfig.icon;
+            const idKey = `${category}-${item.id}`;
+
+            const name = item.name || item.title || item.first_channel_name || 'Unnamed Resource';
+            const email = item.email || item.username || item.phone || item.admin_email || '';
+            const password = item.password || item.admin_password || item.api_key || item.token || item.anon_key || '';
+            const link = item.link || item.url || item.profile_link || '';
+            const desc = item.description || item.note || item.purpose || '';
+
+            return (
+              <div
+                key={idKey}
+                className={cn(
+                  "bg-slate-900/90 border rounded-2xl p-4.5 transition-all duration-200 shadow-lg hover:border-slate-700 flex flex-col justify-between space-y-3 relative group",
+                  isComplete 
+                    ? "border-emerald-500/30 bg-gradient-to-br from-emerald-950/10 via-slate-900/90 to-slate-900/90" 
+                    : "border-slate-800/90 hover:shadow-cyan-950/20"
                 )}
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 text-xs uppercase tracking-widest font-bold">
-                    Loading records...
-                  </td>
-                </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 text-xs uppercase tracking-widest font-bold">
-                    No records found matching your filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-slate-100">{item.name || '-'}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{item.email || item.admin_email || '-'}</td>
-                    {activeTab === 'contact' ? (
-                      <>
-                        <td className="px-4 py-3 text-slate-400 text-xs">{item.phone || '-'}</td>
-                        <td className="px-4 py-3 text-slate-400 text-xs">{item.organization || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-500/10 text-amber-500">
-                            {item.purpose || item.group_name || '-'}
-                          </span>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-4 py-3 font-mono text-slate-400 text-xs">
-                          <div className="flex items-center space-x-2 min-w-[80px]">
-                            <span className={cn("transition-all flex-1", !revealedPasswords[item.id] && "opacity-40 blur-[3px] select-none")}>
-                              {revealedPasswords[item.id] ? (item.password || item.admin_password || '-') : '••••••••'}
-                            </span>
-                            <button 
-                              onClick={() => setRevealedPasswords(prev => ({...prev, [item.id]: !prev[item.id]}))}
-                              className="text-slate-500 hover:text-indigo-400 transition-colors p-1 flex-shrink-0 cursor-pointer"
-                              title={revealedPasswords[item.id] ? "Hide password" : "Show password"}
-                            >
-                              {revealedPasswords[item.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                        </td>
-                        {activeTab === 'supabase' ? (
-                          <>
-                            <td className="px-4 py-3 text-slate-400 text-xs truncate max-w-[150px]" title={item.url}>{item.url || '-'}</td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500">
-                                {item.purpose || '-'}
-                              </span>
-                            </td>
-                          </>
-                        ) : activeTab === 'github' ? (
-                          <>
-                            <td className="px-4 py-3 text-slate-400 text-xs">{item.username || '-'}</td>
-                            <td className="px-4 py-3 text-slate-400 text-xs truncate max-w-[150px]" title={item.profile_link}>{item.profile_link || '-'}</td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-violet-500/10 text-violet-400">
-                                {item.purpose || '-'}
-                              </span>
-                            </td>
-                          </>
-                        ) : activeTab === 'brevo' ? (
-                          <>
-                            <td className="px-4 py-3 text-slate-400 text-xs font-mono truncate max-w-[130px]" title={item.api_key}>{item.api_key || '-'}</td>
-                            <td className="px-4 py-3 text-slate-400 text-xs font-mono truncate max-w-[130px]" title={item.smtp_key}>{item.smtp_key || '-'}</td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-teal-500/10 text-teal-400">
-                                {item.purpose || '-'}
-                              </span>
-                            </td>
-                          </>
-                        ) : activeTab === 'vercel' ? (
-                          <>
-                            <td className="px-4 py-3 text-slate-400 text-xs font-mono truncate max-w-[130px]" title={item.token}>{item.token || '-'}</td>
-                            <td className="px-4 py-3 text-slate-400 text-xs">{item.team_id || '-'}</td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-purple-500/10 text-purple-400">
-                                {item.purpose || '-'}
-                              </span>
-                            </td>
-                          </>
-                        ) : activeTab === 'project' ? (
-                          <>
-                            <td className="px-4 py-3 text-xs">
-                              {item.link ? (
-                                <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline font-mono truncate max-w-[150px] inline-block">
-                                  {item.link}
-                                </a>
-                              ) : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-slate-400 text-xs">
-                              <div className="font-semibold text-slate-300">{item.github_repo || '-'}</div>
-                              {item.vercel_account && <div className="text-[10px] text-purple-400">{item.vercel_account}</div>}
-                            </td>
-                            <td className="px-4 py-3 text-slate-400 text-xs">
-                              <div className="font-semibold text-emerald-400">{item.supabase_details || '-'}</div>
-                              {item.brevo_account && <div className="text-[10px] text-teal-400">{item.brevo_account}</div>}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-500/10 text-indigo-400">
-                                {item.purpose || '-'}
-                              </span>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="px-4 py-3 text-slate-400 text-xs">{item.phone || '-'}</td>
-                            <td className="px-4 py-3 text-slate-400 text-xs">{item.country || '-'}</td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-indigo-500/10 text-indigo-400">
-                                {item.purpose || '-'}
-                              </span>
-                            </td>
-                          </>
-                        )}
-                      </>
-                    )}
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(item)}
-                        title="Click to toggle status (Complete / Uncompleted)"
-                        className={cn(
-                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border transition-all cursor-pointer hover:scale-105 shadow-sm",
-                          (item.status === 'Complete')
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30"
-                        )}
-                      >
-                        {item.status === 'Complete' ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-amber-400" />}
-                        <span>{item.status || 'Uncompleted'}</span>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+              >
+                {/* Card Top: Category Badge, Name, Status Toggle & Top Actions */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1", catConfig.badgeColor)}>
+                      <Icon className="w-3 h-3" />
+                      <span>{catConfig.label}</span>
+                    </span>
+
+                    <button
+                      onClick={() => handleToggleStatus(item, category)}
+                      className={cn(
+                        "px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all",
+                        isComplete
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                      )}
+                    >
+                      {isComplete ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Complete</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          <span>Uncompleted</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Title / Name */}
+                  <h3 className="font-extrabold text-sm text-white truncate tracking-tight">
+                    {highlightMatch(name)}
+                  </h3>
+                </div>
+
+                {/* Card Middle: Fields (Email / Password / Link / Description) */}
+                <div className="space-y-2 text-xs">
+                  {/* Email / Username / Phone */}
+                  {email && (
+                    <div className="flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800/80">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">User/Email</span>
+                      <div className="flex items-center space-x-1 min-w-0 pr-1">
+                        <span className="text-slate-200 font-mono text-[11px] truncate max-w-[170px]">
+                          {highlightMatch(email)}
+                        </span>
                         <button
-                           onClick={() => setQrModalItem(item)}
-                           className="inline-flex items-center justify-center p-1.5 text-violet-400 hover:text-violet-300 hover:bg-slate-800/50 rounded border border-transparent hover:border-violet-500/20 transition-all font-semibold"
-                           title="Scan Credential QR Code"
+                          onClick={() => handleCopy(email, `email-${idKey}`)}
+                          className="p-1 text-slate-500 hover:text-cyan-400"
+                          title="Copy Email"
                         >
-                           <QrCode className="w-4 h-4" />
-                        </button>
-                        <button 
-                           onClick={() => setSelectedAccount(item)}
-                           className="inline-flex items-center justify-center p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-slate-800/50 rounded border border-transparent hover:border-indigo-500/20 transition-all font-semibold"
-                           title="View account details"
-                        >
-                           <View className="w-4 h-4" />
-                           <span className="ml-1.5 text-xs">View</span>
-                        </button>
-                        <button 
-                           onClick={() => setEditingAccount(item)}
-                           className="inline-flex items-center justify-center p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50 rounded border border-transparent hover:border-emerald-500/20 transition-all font-semibold"
-                           title="Edit record"
-                        >
-                           <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                           onClick={() => handleDelete(item.id)}
-                           className="inline-flex items-center justify-center p-1.5 text-rose-500 hover:text-rose-400 hover:bg-slate-800/50 rounded border border-transparent hover:border-rose-500/20 transition-all font-semibold"
-                           title="Delete record"
-                        >
-                           <Trash2 className="w-4 h-4" />
+                          {copiedKey === `email-${idKey}` ? <Check className="w-3 h-3 text-teal-400" /> : <Copy className="w-3 h-3" />}
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    </div>
+                  )}
 
+                  {/* Password / API Key Secret */}
+                  {password && (
+                    <div className="flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800/80">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Secret / Key</span>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-mono text-[11px] text-emerald-400 max-w-[150px] truncate">
+                          {revealedPasswords[idKey] ? highlightMatch(password) : '••••••••••••'}
+                        </span>
+                        <button
+                          onClick={() => togglePassword(idKey)}
+                          className="p-1 text-slate-500 hover:text-slate-300"
+                          title={revealedPasswords[idKey] ? "Hide Password" : "Show Password"}
+                        >
+                          {revealedPasswords[idKey] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </button>
+                        <button
+                          onClick={() => handleCopy(password, `pass-${idKey}`)}
+                          className="p-1 text-slate-500 hover:text-cyan-400"
+                          title="Copy Secret / Password"
+                        >
+                          {copiedKey === `pass-${idKey}` ? <Check className="w-3 h-3 text-teal-400" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live Link */}
+                  {link && (
+                    <div className="flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800/80 text-[11px] font-mono">
+                      <span className="text-cyan-300 truncate max-w-[200px]">
+                        {highlightMatch(link)}
+                      </span>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleCopy(link, `link-${idKey}`)}
+                          className="p-1 text-slate-500 hover:text-cyan-400"
+                          title="Copy Link"
+                        >
+                          {copiedKey === `link-${idKey}` ? <Check className="w-3 h-3 text-teal-400" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                        <a
+                          href={link.startsWith('http') ? link : `https://${link}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 text-cyan-400 hover:text-cyan-200"
+                          title="Open Link in New Tab"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description / Notes */}
+                  {desc && (
+                    <p className="text-[11px] text-slate-400 line-clamp-2 italic bg-slate-950/40 p-2 rounded-lg border border-slate-800/50">
+                      {highlightMatch(desc)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Card Bottom: Action Toolbar */}
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {item.created_at ? format(new Date(item.created_at), 'yyyy-MM-dd') : 'Vault Entry'}
+                  </span>
+
+                  <div className="flex items-center space-x-1">
+                    {/* View Details */}
+                    <button
+                      onClick={() => setSelectedAccount({ ...item, _type: category })}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                      title="View Full Details"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* QR Code */}
+                    <button
+                      onClick={() => setQrModalItem({
+                        title: `QR Code: ${name}`,
+                        subtitle: `${catConfig.label} Credential & Link`,
+                        data: item,
+                        value: link || email || password || name
+                      })}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 transition-colors"
+                      title="Generate Advanced QR Code"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Edit */}
+                    <button
+                      onClick={() => setEditingAccount({ account: item, type: category })}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 transition-colors"
+                      title="Edit Record"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => handleDeleteItem(item, category)}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 text-rose-400 transition-colors"
+                      title="Delete Record"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Dense Table Layout */
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th className="p-3.5 pl-4">Category</th>
+                  <th className="p-3.5">Name / Title</th>
+                  <th className="p-3.5">User / Email / Phone</th>
+                  <th className="p-3.5">Secret / Key</th>
+                  <th className="p-3.5">Link</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 pr-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {visibleItems.map(({ item, category }) => {
+                  const isComplete = item.status === 'Complete';
+                  const catConfig = CATEGORIES.find(c => c.id === category) || CATEGORIES[1];
+                  const Icon = catConfig.icon;
+                  const idKey = `${category}-${item.id}`;
+
+                  const name = item.name || item.title || item.first_channel_name || 'Unnamed';
+                  const email = item.email || item.username || item.phone || item.admin_email || '—';
+                  const password = item.password || item.admin_password || item.api_key || item.token || '';
+                  const link = item.link || item.url || item.profile_link || '';
+
+                  return (
+                    <tr key={idKey} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="p-3.5 pl-4">
+                        <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 w-fit", catConfig.badgeColor)}>
+                          <Icon className="w-3 h-3" />
+                          <span>{catConfig.label}</span>
+                        </span>
+                      </td>
+                      <td className="p-3.5 font-bold text-white max-w-[180px] truncate">
+                        {highlightMatch(name)}
+                      </td>
+                      <td className="p-3.5 font-mono text-[11px] max-w-[160px] truncate">
+                        {highlightMatch(email)}
+                      </td>
+                      <td className="p-3.5 font-mono text-[11px] text-emerald-400">
+                        {password ? (
+                          <div className="flex items-center space-x-1">
+                            <span>{revealedPasswords[idKey] ? highlightMatch(password) : '••••••••'}</span>
+                            <button onClick={() => togglePassword(idKey)} className="p-0.5 text-slate-500 hover:text-white">
+                              {revealedPasswords[idKey] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        ) : '—'}
+                      </td>
+                      <td className="p-3.5 font-mono text-[11px] text-cyan-400 max-w-[180px] truncate">
+                        {link ? (
+                          <a href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+                            <span className="truncate">{link}</span>
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        ) : '—'}
+                      </td>
+                      <td className="p-3.5">
+                        <button
+                          onClick={() => handleToggleStatus(item, category)}
+                          className={cn(
+                            "px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all",
+                            isComplete
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                          )}
+                        >
+                          {isComplete ? 'Complete' : 'Uncompleted'}
+                        </button>
+                      </td>
+                      <td className="p-3.5 pr-4 text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            onClick={() => setSelectedAccount({ ...item, _type: category })}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                            title="View Details"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setQrModalItem({
+                              title: `QR Code: ${name}`,
+                              subtitle: `${catConfig.label}`,
+                              data: item,
+                              value: link || email || password || name
+                            })}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400"
+                            title="QR Code"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setEditingAccount({ account: item, type: category })}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item, category)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 text-rose-400"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Account Details Modal */}
       {selectedAccount && (
-        <AccountDetailsModal 
-          account={selectedAccount} 
-          type={activeTab} 
-          onClose={() => setSelectedAccount(null)} 
+        <AccountDetailsModal
+          account={selectedAccount}
+          type={selectedAccount._type || activeTab}
+          onClose={() => setSelectedAccount(null)}
         />
       )}
 
+      {/* Edit Record Modal */}
       {editingAccount && (
-        <EditRecordModal 
-          account={editingAccount} 
-          type={activeTab} 
-          onClose={() => setEditingAccount(null)} 
+        <EditRecordModal
+          account={editingAccount.account}
+          type={editingAccount.type}
+          onClose={() => setEditingAccount(null)}
           onSave={(updatedData: any) => {
-            // Update local state
-            setData(data.map(item => item.id === editingAccount.id ? { ...item, ...updatedData } : item));
+            const cat = editingAccount.type;
+            const currentList = vaultData[cat] || [];
+            const updated = currentList.map(d => d.id === editingAccount.account.id ? { ...d, ...updatedData } : d);
+            setVaultData(prev => ({ ...prev, [cat]: updated }));
+            localStorage.setItem(`zxhub_cache_${cat}`, JSON.stringify(updated));
             setEditingAccount(null);
           }}
         />
       )}
 
-      {/* PDF Export Mode Options Modal */}
+      {/* PDF Export Modal */}
       <PdfExportModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
-        onExport={(includePassword) => performExportPDF(includePassword)}
-        title={`${activeTab.replace(/_/g, ' ').toUpperCase()} Category PDF Export`}
-        subtitle="Select whether to include passwords in the exported PDF."
-        recordCount={filteredData.length}
+        onExport={performExportPDF}
       />
 
+      {/* Advanced QR Code Modal */}
       {qrModalItem && (
         <QRCodeModal
-          title={`${qrModalItem.name || 'Account'} QR Code`}
-          subtitle={`Quick scanning for ${qrModalItem.name || qrModalItem.email || 'this record'}`}
-          data={qrModalItem}
+          title={qrModalItem.title}
+          subtitle={qrModalItem.subtitle}
+          data={qrModalItem.data}
+          value={qrModalItem.value}
           onClose={() => setQrModalItem(null)}
         />
       )}
+
     </div>
   );
 }

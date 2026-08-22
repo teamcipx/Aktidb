@@ -312,5 +312,23 @@ ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read/write for anon" ON projects;
 CREATE POLICY "Enable read/write for anon" ON projects FOR ALL USING (true);
 
+-- Data Vault (Name, Description, Link, Category, Status, Notes)
+CREATE TABLE IF NOT EXISTS data_vault (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  link TEXT,
+  category TEXT DEFAULT 'General',
+  status TEXT DEFAULT 'Uncompleted',
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE data_vault ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Uncompleted';
+
+ALTER TABLE data_vault ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read/write for anon" ON data_vault;
+CREATE POLICY "Enable read/write for anon" ON data_vault FOR ALL USING (true);
+
 
 

@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles, Download, Smartphone, Image, FolderKanban, Terminal, Fingerprint, Clock, Shield } from 'lucide-react';
+import { Database, Search, LogOut, ShieldCheck, Mail, Facebook, Menu, X, Github, ShieldAlert, Phone, CheckSquare, Send, Triangle, Layers, Sparkles, Download, Smartphone, Image, FolderKanban, Terminal, Fingerprint, Clock, Shield, Bookmark } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
 import BiometricSettingsModal from './BiometricSettingsModal';
@@ -54,7 +54,8 @@ export default function Layout() {
         { name: 'Overview', href: '/', icon: Layers, badge: 'Hub' },
         { name: 'Terminal Logs', href: '/logs', icon: Terminal, color: 'text-emerald-400', badge: 'Audit' },
         { name: 'Task Manager', href: '/tasks', icon: CheckSquare },
-        { name: 'Vault & Search', href: '/search', icon: Search, badge: 'All' },
+        { name: 'Data Vault', href: '/data-vault', icon: Bookmark, color: 'text-cyan-400', badge: 'Vault' },
+        { name: 'Universal Search', href: '/search', icon: Search, badge: 'All' },
       ]
     },
     {

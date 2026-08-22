@@ -2,5 +2,7 @@
   "name": "ZX Hub",
   "description": "Next-gen Cloud & Account Asset Management System for securely managing credentials, cloud platforms, and DevOps environments.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

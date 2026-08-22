@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image, FolderKanban, Terminal, Activity } from 'lucide-react';
+import { Database, UserPlus, Users, Search as SearchIcon, Phone, Download, FileJson, Send, Triangle, Facebook, Mail, ShieldAlert, Github, Layers, Sparkles, ArrowRight, ShieldCheck, CheckSquare, FileText, Image, FolderKanban, Terminal, Activity, Bookmark } from 'lucide-react';
 import { logActivity, getActivityLogs, ActivityLog } from '../lib/logger';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -22,6 +22,7 @@ export default function Overview() {
   const [imgbbCount, setImgbbCount] = useState<number | null>(null);
   const [freeimgCount, setFreeimgCount] = useState<number | null>(null);
   const [projectCount, setProjectCount] = useState<number | null>(null);
+  const [dataVaultCount, setDataVaultCount] = useState<number | null>(null);
   const [recentLogs, setRecentLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function Overview() {
       const { count: imgbb } = await supabase.from('imgbb_api_keys').select('*', { count: 'exact', head: true });
       const { count: freeimg } = await supabase.from('freeimg_api_keys').select('*', { count: 'exact', head: true });
       const { count: project } = await supabase.from('projects').select('*', { count: 'exact', head: true });
+      const { count: dv } = await supabase.from('data_vault').select('*', { count: 'exact', head: true });
       
       setFbCount(fb || 0);
       setGmailCount(gmail || 0);
@@ -55,6 +57,7 @@ export default function Overview() {
       setImgbbCount(imgbb || 0);
       setFreeimgCount(freeimg || 0);
       setProjectCount(project || 0);
+      setDataVaultCount(dv || 0);
 
       const logs = await getActivityLogs(6);
       setRecentLogs(logs);
@@ -73,9 +76,9 @@ export default function Overview() {
     setLoading(true);
     try {
       const tables = [
-        'projects', 'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
+        'data_vault', 'projects', 'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
         'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
-        'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys'
+        'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys', 'freeimg_api_keys'
       ];
       
       const responses = await Promise.all(
@@ -138,9 +141,9 @@ export default function Overview() {
     setLoading(true);
     try {
       const tables = [
-        'projects', 'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
+        'data_vault', 'projects', 'fb_accounts', 'gmail_accounts', 'supabase_accounts', 
         'github_accounts', 'special_fb_accounts', 'special_gmail_accounts', 
-        'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys'
+        'contact_numbers', 'brevo_accounts', 'vercel_accounts', 'imgbb_api_keys', 'freeimg_api_keys'
       ];
       
       const responses = await Promise.all(
@@ -300,9 +303,10 @@ export default function Overview() {
     }
   };
 
-  const totalEntries = (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0) + (imgbbCount || 0) + (freeimgCount || 0) + (projectCount || 0);
+  const totalEntries = (dataVaultCount || 0) + (fbCount || 0) + (gmailCount || 0) + (supabaseCount || 0) + (githubCount || 0) + (specialFbCount || 0) + (specialGmailCount || 0) + (contactCount || 0) + (brevoCount || 0) + (vercelCount || 0) + (imgbbCount || 0) + (freeimgCount || 0) + (projectCount || 0);
 
   const statCards = [
+    { label: 'Data Vault', count: dataVaultCount, icon: Bookmark, color: 'from-cyan-600/20 to-cyan-900/10 border-cyan-500/30 text-cyan-400', glow: 'hover:shadow-cyan-500/20' },
     { label: 'Projects', count: projectCount, icon: FolderKanban, color: 'from-indigo-600/20 to-indigo-900/10 border-indigo-500/30 text-indigo-400', glow: 'hover:shadow-indigo-500/20' },
     { label: 'ImgBB Keys', count: imgbbCount, icon: Image, color: 'from-teal-600/20 to-teal-900/10 border-teal-500/30 text-teal-300', glow: 'hover:shadow-teal-500/20' },
     { label: 'FreeImg Keys', count: freeimgCount, icon: Image, color: 'from-amber-600/20 to-orange-900/10 border-amber-500/30 text-amber-400', glow: 'hover:shadow-amber-500/20' },
@@ -317,6 +321,7 @@ export default function Overview() {
   ];
 
   const platformChartStats: PlatformStat[] = [
+    { name: 'Data Vault', count: dataVaultCount || 0, color: '#06b6d4' },
     { name: 'Projects', count: projectCount || 0, color: '#6366f1' },
     { name: 'ImgBB Keys', count: imgbbCount || 0, color: '#14b8a6' },
     { name: 'FreeImg Keys', count: freeimgCount || 0, color: '#f59e0b' },
@@ -324,7 +329,7 @@ export default function Overview() {
     { name: 'Gmail', count: gmailCount || 0, color: '#ef4444' },
     { name: 'Supabase', count: supabaseCount || 0, color: '#10b981' },
     { name: 'Github', count: githubCount || 0, color: '#94a3b8' },
-    { name: 'Brevo Mail', count: brevoCount || 0, color: '#06b6d4' },
+    { name: 'Brevo Mail', count: brevoCount || 0, color: '#2dd4bf' },
     { name: 'Vercel Cloud', count: vercelCount || 0, color: '#a855f7' },
     { name: 'Contacts', count: contactCount || 0, color: '#eab308' },
     { name: 'Special FB', count: specialFbCount || 0, color: '#f43f5e' },
@@ -332,6 +337,7 @@ export default function Overview() {
   ];
 
   const quickActions = [
+    { name: 'Data Vault Hub', desc: 'Store Name, Description & Links', href: '/data-vault', icon: Bookmark, color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
     { name: 'Add New Project', desc: 'Manage Name, Links, Repo & Keys', href: '/add-project', icon: FolderKanban, color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
     { name: 'ImgBB API Vault', desc: 'Dispense & bulk store API keys', href: '/imgbb', icon: Image, color: 'bg-teal-500/10 text-teal-300 border-teal-500/20' },
     { name: 'FreeImg Host Vault', desc: 'Dispense & bulk store FreeImg keys', href: '/freeimg', icon: Image, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
